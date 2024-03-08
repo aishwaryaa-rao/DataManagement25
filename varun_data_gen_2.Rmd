@@ -1,0 +1,280 @@
+---
+title: "dm"
+output: html_document
+date: "2024-03-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,comment=NA,attr.source='.numberLines')
+
+rm(list=ls())
+install.packages("readr")
+install.packages("RSQLite")
+install.packages("dplyr")
+install.packages("chron")
+library(readr)
+library(RSQLite)
+library(dplyr)
+library(chron)
+```
+
+
+```{r connect}
+
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+                            
+```
+
+
+```{sql, connection = my_db}
+ --customer
+CREATE TABLE IF NOT EXISTS customer(
+  customer_id INT PRIMARY KEY,
+  email VARCHAR (100) NOT NULL,
+  first_name VARCHAR (100) NOT NULL,
+  last_name VARCHAR (100) NOT NULL,
+  contact_number INT (11) NOT NULL
+  );
+
+
+select * from customer
+```
+
+
+```{sql, connection = my_db}
+ --category
+CREATE TABLE IF NOT EXISTS category(
+  category_id INT PRIMARY KEY,
+  product_id VARCHAR(50),
+  category_name VARCHAR (20) NOT NULL,
+  promo_code VARCHAR (20) NOT NULL,
+  product_description TEXT,
+  subcategory_name VARCHAR (20) NOT NULL,
+  FOREIGN KEY (product_id) REFERENCES product(product_id)
+  );
+
+```
+
+```{sql, connection = my_db}
+-- product
+CREATE TABLE IF NOT EXISTS product (
+  product_id VARCHAR(50) PRIMARY KEY NOT NULL,
+  category_id INT,
+  product_name VARCHAR(50),
+  promotion_id VARCHAR(50),
+  product_description TEXT,
+  registration_date DATE,
+  price FLOAT,
+  brand VARCHAR(50),
+  FOREIGN KEY (category_id) REFERENCES category(category_id),
+  FOREIGN KEY (promotion_id) REFERENCES promotion(promotion_id)
+);
+
+```
+
+
+```{sql, connection = my_db}
+-- promotion
+CREATE TABLE IF NOT EXISTS promotion (
+  promotion_id VARCHAR(50) PRIMARY KEY NOT NULL,
+  category_id INT,
+  product_id VARCHAR(50),
+  promo_code VARCHAR(50),
+  promo_price FLOAT,
+  promotion_description TEXT,
+  expiration_date DATE,
+  FOREIGN KEY (category_id) REFERENCES category(category_id),
+  FOREIGN KEY (product_id) REFERENCES product(product_id)
+);
+
+```
+
+
+```{sql connection=my_db}
+
+--seller
+CREATE TABLE IF NOT EXISTS seller (
+    seller_id VARCHAR(50) PRIMARY KEY NOT NULL,
+    seller_email VARCHAR(255),
+    seller_contactnumber INT,
+    seller_address_detail VARCHAR(255),
+    seller_name VARCHAR(100)
+);
+
+```
+
+
+
+```{sql, connection = my_db}
+ --shoppingcart
+ 
+ CREATE TABLE IF NOT EXISTS shoppingcart (
+    order_id VARCHAR(50) PRIMARY KEY,
+    order_date DATE,
+    price FLOAT,
+    quantity INT,
+    shipping_id VARCHAR(50),
+    customer_id INT,
+    product_id VARCHAR(50),
+    FOREIGN KEY (shipping_id) REFERENCES shipping(shipping_id),
+    FOREIGN KEY (customer_id) REFERENCES customer(customer_id),
+    FOREIGN KEY (product_id) REFERENCES product(product_id)
+);
+
+
+```
+
+
+```{sql connection=my_db}
+--shipping
+CREATE TABLE IF NOT EXISTS shipping (
+    shippment_id VARCHAR(50) PRIMARY KEY,
+    shipping_status VARCHAR(50),
+    order_id VARCHAR(50),
+    shipping_address VARCHAR(50),
+    shipping_city VARCHAR(50),
+    shipping_state VARCHAR(50),
+    shipping_postal_code INT(11),
+    shipping_country VARCHAR(50),
+    recipient VARCHAR(50),
+    phone_num INT(11),
+    delivery_date DATE,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+);
+
+```
+
+
+```{sql, connection = my_db}
+ --payment
+ 
+ CREATE TABLE IF NOT EXISTS payment (
+    payment_id VARCHAR(50) PRIMARY KEY,
+    payment_type VARCHAR(50),
+    invoice_no VARCHAR(50),
+    Amount INT,
+    shipping_id VARCHAR(50),
+    customer_id INT,
+    product_id VARCHAR(50),
+    FOREIGN KEY (shipping_id) REFERENCES shipping(shipping_id),
+    FOREIGN KEY (customer_id) REFERENCES customer(customer_id),
+    FOREIGN KEY (product_id) REFERENCES product(product_id)
+);
+
+
+```
+
+
+
+```{sql, connection = my_db}
+-- review
+CREATE TABLE IF NOT EXISTS review (
+  review_id VARCHAR(50) PRIMARY KEY NOT NULL,
+  customer_id INT,
+  product_id VARCHAR(50),
+  review_rating INT(5),
+  review_description TEXT,
+  review_date DATE,
+  FOREIGN KEY (customer_id) REFERENCES customer(customer_id),
+  FOREIGN KEY (product_id) REFERENCES product(product_id)
+);
+
+```
+
+
+## Data Creation using R
+
+
+```{r}
+
+install.packages("digest")
+library(digest)
+```
+
+# for customer table
+
+```{r}
+
+set.seed(123)
+
+# Generate customer IDs from 1 to 100
+customer_id <- 1:100
+
+# Generate fake names
+first_names <- c("John", "Alice", "Bob", "Emily", "Michael", "Sophia", "William", "Emma", "Daniel", "Olivia","Liam", "Mia", "Noah", "Ava", "James", "Charlotte", "Benjamin", "Amelia", "Ethan", "Ella")
+last_names <- c("Smith", "Johnson", "Brown", "Davis", "Wilson", "Taylor", "Clark", "Walker", "Green", "Hall","Harris", "Roberts", "Lopez", "Hill", "King", "Wright", "Scott", "Adams", "Baker", "Carter")
+first_name <- sample(first_names, size = 100, replace = TRUE)
+last_name <- sample(last_names, size = 100, replace = TRUE)
+
+
+# phone numbers with country code starting with 0 and 7 or 9 after that
+phone_numbers <- paste0("0", sample(c(7, 9), size = 100, replace = TRUE), sample(1000000000:9999999999, size = 100, replace = TRUE))
+
+
+# Generate customer emails by combining names and IDs
+customer_emails <- paste0(first_name, ".", last_name, customer_id, "@example.com")
+
+# Combine data
+data <- data.frame(
+  customer_id = customer_id,
+  email = customer_emails,
+  first_name = first_name,
+  last_name = last_name,
+  contact_number = phone_numbers
+)
+
+# Save data as CSV file
+write.csv(data, "customer_data.csv", row.names = FALSE)
+
+
+
+```
+
+
+
+# for category table
+
+```{r}
+# Load necessary libraries
+install.packages("stringi")
+library(stringi)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Generate category IDs
+category_id <- 1:30
+
+# Generate category names
+category_names <- c("Electronics", "Clothing","Home & Garden")
+
+length(category_id)
+length(category_names)
+
+# Sample sub category types
+Electronics <- c("Television", "DVD", "Refridgerator", "Printer", "Mobile phone", "microwave","heater")
+Clothing <- c("shirts", "ties", "sarees", "tops", "womens wear", "socks","belts")
+Home_Garden <- c("flowers", "pots", "air freshners", "carpets", "bins", "mops","instant heater")
+
+
+# Generate sub category  names
+category_type <- c(sample(Electronics, size = 10, replace = TRUE), sample(Clothing, size = 10, replace = TRUE),sample(Home_Garden, size = 10, replace = TRUE))
+
+# Generate category descriptions
+category_descriptions <- c("Electronics item", "clothing item","home items")
+
+# Combine data
+category_data <- data.frame(
+  category_id = category_id,
+  category_name = rep(category_names, each = 10),
+  sub_category = category_type,
+  category_description = rep(category_descriptions, each = 10)
+)
+
+# Save data as CSV file
+write.csv(category_data, "category_data.csv", row.names = FALSE)
+
+```
+
+
+
