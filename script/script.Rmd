@@ -91,19 +91,17 @@ CREATE TABLE IF NOT EXISTS promotion (
 
 
 ```{sql connection=my_db}
+--vendor
 
---seller
 CREATE TABLE IF NOT EXISTS seller (
     seller_id VARCHAR(50) PRIMARY KEY NOT NULL,
-    seller_email VARCHAR(255),
-    seller_contactnumber INT,
-    seller_address_detail VARCHAR(255),
-    seller_name VARCHAR(100)
+    seller_email VARCHAR(255) NOT NULL,
+    seller_contactnumber INT NOT NULL,
+    seller_name VARCHAR(100) NOT NULL,
+    seller_address_id INT NOT NULL -- constraints as foreign key needs now
 );
 
 ```
-
-
 
 ```{sql, connection = my_db}
  --shoppingcart
@@ -111,19 +109,13 @@ CREATE TABLE IF NOT EXISTS seller (
  CREATE TABLE IF NOT EXISTS shoppingcart (
     order_id VARCHAR(50) PRIMARY KEY,
     order_date DATE,
-    price FLOAT,
     quantity INT,
-    shipping_id VARCHAR(50),
-    customer_id INT,
-    product_id VARCHAR(50),
-    FOREIGN KEY (shipping_id) REFERENCES shipping(shipping_id),
-    FOREIGN KEY (customer_id) REFERENCES customer(customer_id),
-    FOREIGN KEY (product_id) REFERENCES product(product_id)
+    product_id INT, -- constraints as foreign key needs now
+    customer_id INT, -- constraints as foreign key needs now
+    shipping_id INT -- constraints as foreign key needs now
 );
 
-
 ```
-
 
 ```{sql connection=my_db}
 --shipping
@@ -275,6 +267,73 @@ category_data <- data.frame(
 write.csv(category_data, "category_data.csv", row.names = FALSE)
 
 ```
+
+# for vendor table
+```{r}
+# seller_id : Start from 6xx
+set.seed(11)
+seller_id <- tibble(seller_id = unique(round(runif(80, 600, 699), 0)))
+
+# address_id (starts with 20, it should be included in address table)
+set.seed(11)
+address_id <- tibble(address_id = unique(round(runif(80, 100, 199), 0)))
+
+# seller_name
+# install.packages('randomNames')
+library('randomNames')
+
+seller_name <- randomNames::randomNames(54, which.names = 'first',
+                                        sample.with.replacement = FALSE,
+                                        return.complete.data = TRUE)
+
+# contact_number
+set.seed(11)
+seller_contact <- tibble(contact = unique(round(runif(54, 440000000000, 449999999999),0)))
+
+# seller_email
+#install.packages('stringi')
+library(stringi)
+set.seed(11)
+seller_email <- tibble(email = paste0(seller_name$first_name, round(runif(54,1,100),0),
+                              "@",
+                              stringi::stri_rand_strings(10, 5), '.', 'com'))
+
+data_seller <- seller_id %>% mutate(seller_name = seller_name$first_name, 
+                                    seller_address = address_id$address_id, 
+                                    contact = seller_contact$contact, 
+                                    email = seller_email$email)
+```
+
+# for shoppingcart_order table
+```{r}
+# order_id: Start from 7xx
+set.seed(12)
+order_id <- tibble(order_id = unique(round(runif(80, 700, 799), 0)))
+
+# product_id : should be randomly selected from product table
+#set.seed(12)
+
+# shipping_id : should be randomly selected from shipping table or we just can refer order_id to shipping table only
+#set.seed(13)
+
+# customer_id
+set.seed(1)
+order_customer <- tibble(customer_id = round(runif(57, 1, 100),0))
+
+# quantity
+set.seed(13)
+order_quantity <- tibble(quantity = (round(runif(57, 1, 10), 0)))
+
+# order_date (yyyy/mm/dd)
+set.seed(13)
+order_date <- tibble(order_date = sample(seq(as.Date('2023/01/01'), as.Date('2024/02/29'), by="day"), 57))
+
+# order_data # product_id should be mutated 
+data_order <- order_id %>% mutate(quantity = order_quantity$quantity, 
+                                  order_date = order_date$order_date, 
+                                  customer_id = order_customer$customer_id)
+
+
 
 
 
