@@ -302,6 +302,9 @@ data_seller <- seller_id %>% mutate(seller_name = seller_name$first_name,
                                     seller_address = address_id$address_id, 
                                     contact = seller_contact$contact, 
                                     email = seller_email$email)
+# Save data as CSV file
+write.csv(data_seller, "seller_data.csv", row.names = FALSE)
+
 ```
 
 # for shoppingcart_order table
@@ -332,8 +335,10 @@ order_date <- tibble(order_date = sample(seq(as.Date('2023/01/01'), as.Date('202
 data_order <- order_id %>% mutate(quantity = order_quantity$quantity, 
                                   order_date = order_date$order_date, 
                                   customer_id = order_customer$customer_id)
+# Save data as CSV file
+write.csv(data_order, "order_data.csv", row.names = FALSE)
 
-
+```
 
 
 
