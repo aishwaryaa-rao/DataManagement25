@@ -340,5 +340,43 @@ write.csv(data_order, "order_data.csv", row.names = FALSE)
 
 ```
 
+# database update : seller
+```{r}
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+seller_data <- readr::read_csv("seller_data.csv")
 
+RSQLite::dbWriteTable(my_db,"seller_data",seller_data,overwrite=TRUE)
+
+head(seller_data,2)
+```
+
+```{sql, connection = my_db}
+INSERT INTO seller (seller_id, seller_email, seller_contactnumber, seller_name, seller_address_id)
+SELECT seller_id, email, contact, seller_name, seller_address FROM seller_data;
+```
+
+```{sql, connection = my_db}
+SELECT *
+FROM seller;
+```
+
+# database update : shopping_cart(order)
+
+```{r}
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+order_data <- readr::read_csv("order_data.csv")
+
+RSQLite::dbWriteTable(my_db,"order_data",order_data,overwrite=TRUE)
+```
+
+```{sql, connection = my_db}
+INSERT INTO shoppingcart (order_id, order_date, quantity, customer_id)
+SELECT order_id, order_date, quantity, customer_id FROM order_data;
+```
+
+```{sql, connection = my_db}
+-- set customer_id as a Foreign key (after customer DB created)
+
+
+```
 
