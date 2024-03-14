@@ -560,3 +560,172 @@ RSQLite::dbWriteTable(my_db,"transaction_billing_data",transaction_billing_data,
 INSERT INTO transaction_billing (billing_id, quantity, order_id)
 SELECT billing_id, quantity, order_id FROM transaction_billing_data;
 ```
+```{r}
+set.seed(123) # Ensure reproducibility
+
+# Assuming you have N rows of data you want to generate
+n <- 100
+
+# Generate the numeric part: 4 digits
+numeric_part <- stri_rand_strings(n, 4, pattern = "[0-9]")
+
+# Concatenate "ID" with the numeric parts to form the promotion_id values
+promotion_id <- paste0("ID", numeric_part)
+
+# Verify the generated IDs
+head(promotion_id)
+
+# Placeholder for category_id and product_id - replace with actual fetching logic
+# Assuming these are vectors of existing category_ids and product_ids
+# Example:
+# category_id <- c(1, 2, 3, 4, 5) # Fetch from your database
+# product_id <- c("A1", "B2", "C3", "D4", "E5") # Fetch from your database
+
+# For demonstration, let's create some sample category_id and product_id
+category_id <- sample(1:5, n, replace = TRUE) # Randomly assign existing category IDs
+product_id <- sample(c("A1", "B2", "C3", "D4", "E5"), n, replace = TRUE) # Randomly assign existing product IDs
+
+# Generate fake promo_code
+promo_code <- stri_rand_strings(n, 10, pattern = "[A-Z0-9]")
+
+# Generate fake promo_price
+promo_price <- runif(n, min = 10, max = 100)
+
+# Fake promotion description
+# Define a vector of celebration descriptions
+descriptions <- c(
+  "Christmas Deal", "Spring Break Special", "Black Friday Discount",
+  "Summer Sale", "Winter Wonderland Deal", "New Year's Offer",
+  "Valentine's Day Promo", "Easter Eggstravaganza", "Thanksgiving Savings",
+  "Halloween Spooktacular", "Labor Day Weekend Sale", "Memorial Day Markdown",
+  "4th of July Fireworks Sale", "Back to School Bargain", "Cyber Monday Steal",
+  "Boxing Day Bonanza", "St. Patrick's Day Special", "Mother's Day Deal",
+  "Father's Day Offer", "Presidents Day Sale", "Prime Day Perks",
+  "Autumn Equinox Sale", "Spring Equinox Deal", "Summer Solstice Special",
+  "Winter Solstice Discount", "End of Season Clearance", "Flash Sale Frenzy",
+  "Leap Year Special", "Earth Day Eco-Savings", "Veterans Day Thank You Deal",
+  "Cinco de Mayo Fiesta Sale", "Flag Day Findings", "Martin Luther King Jr. Day Special",
+  "Groundhog Day Deal", "April Fools' Day Flash Sale", "Chinese New Year Offer",
+  "Diwali Discount", "Ramadan Special", "Eid Sale", "Hanukkah Highlight",
+  "Oktoberfest Offer", "Columbus Day Discovery Sale", "Indigenous Peoples' Day Promo",
+  "United Nations Day Special", "World Environment Day Deal", "World Health Day Savings",
+  "International Women's Day Offer", "World Teachers' Day Tribute Sale", "International Literacy Day Deal",
+  "World Animal Day Adoption Special", "Black History Month Highlight", "Pride Month Promo",
+  "World Vegan Day Deal", "International Coffee Day Brew Bargain", "World Book Day Bibliophile's Dream",
+  "International Yoga Day Zen Sale", "International Beer Day Bash", "World Chocolate Day Choco-Lovers Special",
+  "National Pizza Day Pie Deal", "International Cat Day Celebration", "National Dog Day Discount",
+  "World Photography Day Snap Sale", "International Talk Like A Pirate Day Plunder", "World Pasta Day Feast Deal",
+  "National Hiking Day Trail Special", "World Music Day Melody Markdown", "National Ice Cream Day Indulgence",
+  "World Poetry Day Poetic Promo", "International Day of Friendship Bonding Bonus", "World Smile Day Cheer Special",
+  "International Day of Peace Serenity Sale", "National Video Games Day Gamer's Delight", "World Tourism Day Travel Deal",
+  "International Men's Day Appreciation Sale", "National Novel Writing Month Novelist's Nook", "World AIDS Day Awareness Deal",
+  "International Human Rights Day Dignity Discount", "Winter Holiday Wonders", "Festive Season Sale",
+  "Mid-Year Madness", "End of Year Extravaganza", "Season of Giving Special"
+)
+
+# Randomly select a celebration description for each row in the dataframe
+set.seed(123) # For reproducibility
+promotion_description <- sample(descriptions, 100, replace = TRUE)
+
+
+# Generate fake expiration_date
+expiration_date <- as.Date("2024-01-01") + days(sample(1:365, n, replace = TRUE))
+
+# Create the dataframe
+promotion_df <- data.frame(promotion_id, category_id, product_id, promo_code, promo_price, promotion_description, expiration_date)
+
+# Preview the dataframe
+head(promotion_df)
+
+# Note: Ensure to adjust the logic for fetching actual category_id and product_id from your database
+
+```
+```{r}
+# Load necessary libraries
+library(stringi)  # For generating random strings
+library(lubridate)  # For handling dates
+
+# Number of rows you want to generate
+N <- 100
+
+# product_id: Random unique alphanumeric strings (Let's keep it simple - 10 characters)
+product_id <- stri_rand_strings(N, 10, pattern = "[A-Za-z0-9]")
+
+# category_id: Placeholder integer IDs (e.g., 1 to 5)
+category_id <- sample(1:5, N, replace = TRUE)
+
+# product_name: Let's simulate product names by combining random adjectives and nouns
+adjectives <- c("Amazing", "Portable", "Eco-friendly", "Innovative", "Essential", "Compact", "Durable", "Wireless", "High-quality", "Smart")
+nouns <- c("Speaker", "Laptop", "Camera", "Headphones", "Watch", "Monitor", "Charger", "Adapter", "Mouse", "Keyboard")
+product_name <- paste(sample(adjectives, N, replace = TRUE), sample(nouns, N, replace = TRUE))
+
+# promotion_id: Assuming the promotion IDs from the promotion_df generated earlier
+# Let's take the first N promotion_ids from promotion_df for simplicity
+promotion_id <- promotion_df$promotion_id[1:N]
+
+# product_description: Let's generate some placeholder text
+product_description <- paste("This", sample(adjectives, N, replace = TRUE), sample(nouns, N, replace = TRUE), "is one of a kind. It offers unparalleled performance and convenience.")
+
+# registration_date: Random dates within the last year
+registration_date <- as.Date("2023-01-01") + days(sample(0:364, N, replace = TRUE))
+
+# price: Random prices between $10.00 and $1000.00
+price <- round(runif(N, min = 10, max = 1000), 2)
+
+# brand: Sample brand names
+brands <- c("TechGuru", "InnoVate", "EcoTech", "NextGen", "UltraGear", "PrimeTech", "Elevate", "SonicPlus", "FutureVision", "EcoDrive")
+brand <- sample(brands, N, replace = TRUE)
+
+# Create the dataframe
+product_df <- data.frame(product_id, category_id, product_name, promotion_id, product_description, registration_date, price, brand)
+
+# Display the head of the dataframe to verify
+head(product_df)
+```
+```{r}
+# Save product_df to a CSV file
+write.csv(product_df, "product_data.csv", row.names = FALSE)
+
+# Save promotion_df to a CSV file
+write.csv(promotion_df, "promotion_data.csv", row.names = FALSE)
+
+```
+
+```{r}
+
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+product_data <- readr::read_csv("product_data.csv")
+
+RSQLite::dbWriteTable(my_db,"product_data",product_data,overwrite=TRUE)
+
+head(product_data,2)
+
+```
+```{sql, connection = my_db}
+INSERT INTO product (product_id, category_id, product_name, promotion_id,product_description, registration_date, price, brand)
+SELECT product_id, category_id, product_name, promotion_id,product_description, registration_date, price, brand  FROM product_data;
+
+```
+
+```{r}
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+promotion_data <- readr::read_csv("promotion_data.csv")
+
+RSQLite::dbWriteTable(my_db,"promotion_data",promotion_data,overwrite=TRUE)
+
+head(promotion_data,2)
+```
+```{sql, connection = my_db}
+INSERT INTO promotion (promotion_id, category_id, product_id, promo_code,promo_price, promotion_description, expiration_date)
+SELECT promotion_id, category_id, product_id, promo_code,promo_price, promotion_description, expiration_date 
+FROM promotion_data;
+```
+
+```{r}
+library(DBI)
+
+# Assuming 'con' is your database connection object and 'promotion_data' is your R dataframe
+dbWriteTable(my_db, "promotion_data", promotion_data, overwrite = TRUE, row.names = FALSE)
+
+```
+
