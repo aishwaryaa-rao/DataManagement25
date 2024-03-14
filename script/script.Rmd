@@ -796,13 +796,13 @@ RSQLite::dbWriteTable(my_db,"shipping",shipping,overwrite=TRUE)
 # database update : Review
 ```{r}
 my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
-category_data <- readr::read_csv("review.csv")
+review <- readr::read_csv("review.csv")
 
 RSQLite::dbWriteTable(my_db,"review",review,overwrite=TRUE)
 ```
 
 ```{sql, connection = my_db}
-INSERT INTO category (review_id,review_score, customer_id, product_id)
+INSERT INTO review (review_id,review_rating, customer_id, product_id)
 SELECT review_id,review_score, customer_id, product_id FROM review_data;
 
 ```
