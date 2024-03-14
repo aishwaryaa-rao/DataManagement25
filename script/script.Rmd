@@ -12,6 +12,8 @@ install.packages("readr")
 install.packages("RSQLite")
 install.packages("dplyr")
 install.packages("chron")
+install.packages("stringi")
+library(stringi)
 library(readr)
 library(RSQLite)
 library(dplyr)
@@ -179,14 +181,6 @@ CREATE TABLE IF NOT EXISTS review (
 
 ```{r}
 
-install.packages("digest")
-library(digest)
-```
-
-# for customer table
-
-```{r}
-
 set.seed(123)
 
 # Generate customer IDs from 1 to 100
@@ -227,18 +221,18 @@ write.csv(data, "customer_data.csv", row.names = FALSE)
 # for category table
 
 ```{r}
-# Load necessary libraries
-install.packages("stringi")
-library(stringi)
+
+# Set seed for reproducibility
+set.seed(123)
 
 # Set seed for reproducibility
 set.seed(123)
 
 # Generate category IDs
-category_id <- 1:30
+category_id <- 1:100
 
 # Generate category names
-category_names <- c("Electronics", "Clothing","Home & Garden")
+category_names <- c("Electronics", "Clothing","Home & Garden","Furniture","Kitchen_Appliances","Sports_Outdoor","Beauty_Cosmetics","Toys_Games","Automotive","Pet_Supplies")
 
 length(category_id)
 length(category_names)
@@ -247,13 +241,20 @@ length(category_names)
 Electronics <- c("Television", "DVD", "Refridgerator", "Printer", "Mobile phone", "microwave","heater")
 Clothing <- c("shirts", "ties", "sarees", "tops", "womens wear", "socks","belts")
 Home_Garden <- c("flowers", "pots", "air freshners", "carpets", "bins", "mops","instant heater")
+Furniture <- c("sofas", "chairs", "tables", "beds", "cabinets", "desks", "bookshelves")
+Kitchen_Appliances<- c("blender", "toaster", "coffee maker", "food processor", "juicer, mixer", "microwave")
+Sports_Outdoor <- c("camping gear", "bicycles", "sports equipment", "hiking gear", "fishing gear","outdoor clothing", "fitness equipment")
+Beauty_Cosmetics<- c("makeup", "skincare products", "haircare products", "perfumes", "grooming tools", "beauty accessories", "nail care")
+Toys_Games <- c("action figures", "board games", "puzzles", "dolls", "educational toys", "outdoor play equipment", "building blocks")
+Automotive <- c("car accessories", "tools", "car care products", "maintenance supplies", "interior accessories", "exterior accessories", "car electronics")
+Pet_Supplies <- c("pet food", "pet toys", "pet grooming supplies", "beds and furniture", "litter boxes", "collars and leashes", "carriers and travel products")
 
 
 # Generate sub category  names
-category_type <- c(sample(Electronics, size = 10, replace = TRUE), sample(Clothing, size = 10, replace = TRUE),sample(Home_Garden, size = 10, replace = TRUE))
+category_type <- c(sample(Electronics, size = 10, replace = TRUE), sample(Clothing, size = 10, replace = TRUE),sample(Home_Garden, size = 10, replace = TRUE),sample(Furniture, size = 10, replace = TRUE),sample(Kitchen_Appliances, size = 10, replace = TRUE),sample(Sports_Outdoor, size = 10, replace = TRUE),sample(Beauty_Cosmetics, size = 10, replace = TRUE),sample(Toys_Games, size = 10, replace = TRUE),sample(Automotive, size = 10, replace = TRUE),sample(Pet_Supplies, size = 10, replace = TRUE))
 
 # Generate category descriptions
-category_descriptions <- c("Electronics item", "clothing item","home items")
+category_descriptions <- c("Electronics item", "clothing item","home items","Furniture items","Kitchen items","Sports items","Beauty products","Games","vehicle parts","pet supplies")
 
 # Combine data
 category_data <- data.frame(
@@ -377,6 +378,45 @@ SELECT order_id, order_date, quantity, customer_id FROM order_data;
 ```{sql, connection = my_db}
 -- set customer_id as a Foreign key (after customer DB created)
 
+
+```
+
+
+```{r}
+
+
+# database update : customer
+
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+customer_data <- readr::read_csv("customer_data.csv")
+
+RSQLite::dbWriteTable(my_db,"customer_data",customer_data,overwrite=TRUE)
+
+head(customer_data,2)
+
+```
+
+```{sql, connection = my_db}
+INSERT INTO customer (customer_id, email, first_name, last_name, contact_number)
+SELECT customer_id, email, first_name, last_name, contact_number FROM customer_data;
+SELECT *
+FROM customer;
+
+```
+
+
+
+# database update : category
+```{r}
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+category_data <- readr::read_csv("category_data.csv")
+
+RSQLite::dbWriteTable(my_db,"category_data",category_data,overwrite=TRUE)
+```
+
+```{sql, connection = my_db}
+INSERT INTO category (category_id, product_id, category_name, promo_code,product_description,subcategory_name)
+SELECT category_id, product_id, category_name, promo_code,product_description,subcategory_name FROM category_data;
 
 ```
 
