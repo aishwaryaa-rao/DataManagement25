@@ -535,3 +535,16 @@ SELECT category_id, product_id, category_name, promo_code,product_description,su
 
 ```
 
+# database update : address
+```{r}
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+address_data <- readr::read_csv("address_data.csv")
+
+RSQLite::dbWriteTable(my_db,"address_data",address_data,overwrite=TRUE)
+```
+
+```{sql, connection = my_db}
+INSERT INTO address (address_id, city, country, postal_code, detailed_address, customer_id)
+SELECT address_id, city, country, postal_code, detailed_address, customer_id FROM address_data;
+
+```
