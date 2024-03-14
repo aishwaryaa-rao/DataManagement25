@@ -32,8 +32,8 @@ jobs:
           Rscript /cloud/project/script/script.Rmd
       - name: Add files
         run: |
-          git config --global user.email "nikos.korfiatis@gmail.com"
-          git config --global user.name "nkorf"
+          git config --global user.email "aishwarya23.rao@gmail.com"
+          git config --global user.name "aishwaryaa-rao"
           git add --all figures/
       - name: Commit files
         run: |
