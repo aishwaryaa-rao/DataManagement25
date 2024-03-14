@@ -122,18 +122,10 @@ CREATE TABLE IF NOT EXISTS seller (
 ```{sql connection=my_db}
 --shipping
 CREATE TABLE IF NOT EXISTS shipping (
-    shippment_id VARCHAR(50) PRIMARY KEY,
-    shipping_status VARCHAR(50),
-    order_id VARCHAR(50),
-    shipping_address VARCHAR(50),
-    shipping_city VARCHAR(50),
-    shipping_state VARCHAR(50),
-    shipping_postal_code INT(11),
-    shipping_country VARCHAR(50),
-    recipient VARCHAR(50),
-    phone_num INT(11),
-    delivery_date DATE,
-    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+    shippment_id INT PRIMARY KEY,
+    billing_id INT,
+    shipment_status VARCHAR(50),
+    FOREIGN KEY (billing_id) REFERENCES transaction_billing(billing_id)
 );
 
 ```
@@ -726,6 +718,39 @@ library(DBI)
 
 # Assuming 'con' is your database connection object and 'promotion_data' is your R dataframe
 dbWriteTable(my_db, "promotion_data", promotion_data, overwrite = TRUE, row.names = FALSE)
+
+```
+
+```{r}
+set.seed(1)
+
+# Sample shipment-status
+shipment_status <- c("Shipped","In-Transit","Out for Delivery","Delivered")
+
+# Generate data value
+shipment_status_data <- sample(shipment_status, size = 100, replace = TRUE)
+shipping_id <- tibble(shipping_id = unique(round(runif(100, 1500, 3000), 0)))
+# address_id <- tibble(address_id %>% sample_n(57,replace = TRUE))
+
+shipping <- shipping_id %>% mutate(#address_id = address_id$address_id, 
+                                  billing_id = transaction_billing_data$billing_id,
+                                  shipment_status = shipment_status_data)
+
+# Save data as CSV file
+write.csv(data_shipping, "shipping.csv", row.names = FALSE)
+
+```
+
+```{r}
+
+# database insert : shipping
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+
+shipping <- readr::read_csv("shipping.csv")
+
+# Persist to db
+RSQLite::dbWriteTable(my_db,"shipping",shipping,overwrite=TRUE)
+
 
 ```
 
