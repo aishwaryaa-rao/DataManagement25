@@ -29,7 +29,7 @@ jobs:
           Rscript -e 'install.packages(c("ggplot2","readr","dplyr","RSQLite","digest","stringi","randomNames"))'
       - name: Execute R script
         run: |
-          Rscript /cloud/project/script/script.R
+          Rscript /cloud/project/script/script.Rmd
       - name: Add files
         run: |
           git config --global user.email "nikos.korfiatis@gmail.com"
