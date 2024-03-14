@@ -159,8 +159,6 @@ CREATE TABLE IF NOT EXISTS review (
   customer_id INT,
   product_id VARCHAR(50),
   review_rating INT(5),
-  review_description TEXT,
-  review_date DATE,
   FOREIGN KEY (customer_id) REFERENCES customer(customer_id),
   FOREIGN KEY (product_id) REFERENCES product(product_id)
 );
@@ -212,13 +210,27 @@ phone_numbers <- paste0("0", sample(c(7, 9), size = 100, replace = TRUE), sample
 # Generate customer emails by combining names and IDs
 customer_emails <- paste0(first_name, ".", last_name, customer_id, "@example.com")
 
+#Generate card_number
+generate_unique_numbers <- function(n, digits) {
+  unique_numbers <- character(0) 
+  while(length(unique_numbers) < n) {
+    number <- paste0(sample(0:9, digits, replace = TRUE), collapse = "")
+    if(!number %in% unique_numbers) {
+      unique_numbers <- c(unique_numbers, number)
+    }
+  }
+  unique_numbers
+}
+card_number <- generate_unique_numbers(100, 16)
+
 # Combine data
 data <- data.frame(
   customer_id = customer_id,
   email = customer_emails,
   first_name = first_name,
   last_name = last_name,
-  contact_number = phone_numbers
+  contact_number = phone_numbers,
+card_number=card_number
 )
 
 # Save data as CSV file
@@ -445,6 +457,33 @@ transaction_billing_data <- data.frame(
 # Save data as CSV file
 write.csv(transaction_billing_data, "transaction_billing_data.csv", row.names = FALSE)
 ```
+
+##Review
+```{r}
+set.seed(123)
+
+# Generate customer IDs from 1 to 100
+customer_id <- 1:100
+
+# Generate review IDs from 1 to 100
+review_id <-3001:3100
+
+# Generate product IDs from 1 to 100
+product_id <-4001:4100
+
+#Generate review_score
+set.seed(123)
+review_score <- sample(1:5, 100, replace = TRUE)
+
+# Combine data
+review <-data.frame(review_id=review_id,review_score=review_score, customer_id=customer_id, product_id=product_id)
+
+
+write.csv(review, "review.csv", row.names = FALSE)
+
+getwd()
+```
+
 
 
 
@@ -751,6 +790,20 @@ shipping <- readr::read_csv("shipping.csv")
 # Persist to db
 RSQLite::dbWriteTable(my_db,"shipping",shipping,overwrite=TRUE)
 
+
+```
+
+# database update : Review
+```{r}
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+category_data <- readr::read_csv("review.csv")
+
+RSQLite::dbWriteTable(my_db,"review",review,overwrite=TRUE)
+```
+
+```{sql, connection = my_db}
+INSERT INTO category (review_id,review_score, customer_id, product_id)
+SELECT review_id,review_score, customer_id, product_id FROM review_data;
 
 ```
 
