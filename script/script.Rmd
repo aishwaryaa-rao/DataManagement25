@@ -546,5 +546,17 @@ RSQLite::dbWriteTable(my_db,"address_data",address_data,overwrite=TRUE)
 ```{sql, connection = my_db}
 INSERT INTO address (address_id, city, country, postal_code, detailed_address, customer_id)
 SELECT address_id, city, country, postal_code, detailed_address, customer_id FROM address_data;
+```
 
+# database update : transaction_billing
+```{r}
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+transaction_billing_data <- readr::read_csv("transaction_billing_data.csv")
+
+RSQLite::dbWriteTable(my_db,"transaction_billing_data",transaction_billing_data,overwrite=TRUE)
+```
+
+```{sql, connection = my_db}
+INSERT INTO transaction_billing (billing_id, quantity, order_id)
+SELECT billing_id, quantity, order_id FROM transaction_billing_data;
 ```
