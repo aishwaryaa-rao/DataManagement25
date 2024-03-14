@@ -174,7 +174,27 @@ CREATE TABLE IF NOT EXISTS review (
 );
 
 ```
+```{sql, connection = my_db}
+-- address
+CREATE TABLE IF NOT EXISTS address (
+  address_id VARCHAR(50) PRIMARY KEY NOT NULL,
+  city VARCHAR (50) NOT NULL,
+  country VARCHAR (50) NOT NULL,
+  postal_code VARCHAR (50) NOT NULL,
+  detailed_address VARCHAR (50) NOT NULL,
+  customer_id INT,
+  FOREIGN KEY (customer_id) REFERENCES customer(customer_id)
+);
+```
 
+```{sql, connection = my_db}
+-- transaction_billing
+CREATE TABLE IF NOT EXISTS transaction_billing (
+  billing_id INT PRIMARY KEY NOT NULL,
+  quantity INT, 
+  FOREIGN KEY (order_id) REFERENCES shoppingcart_order(order_id)
+);
+```
 
 ## Data Creation using R
 
@@ -340,6 +360,101 @@ data_order <- order_id %>% mutate(quantity = order_quantity$quantity,
 write.csv(data_order, "order_data.csv", row.names = FALSE)
 
 ```
+
+# for address table
+```{r}
+# Generate address IDs from 100 to 199
+address_id <- 100:199
+
+# Generate city 
+city <- c("London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Liverpool", 
+            "Oxford", "Cambridge", "Cardiff", "Belfast", "Brighton", "Leeds", "Sheffield", "Coventry",
+            "Nottingham", "Leicester", "Newcastle", "Sunderland", "Swansea", "Southampton", "Portsmouth",
+            "York", "Derby", "Reading")
+
+# Generate country 
+country <- c("England", "Scotland", "Wales", "Northern Ireland")
+
+# Generate function for UK-like postal code
+generate_postal_code <- function(n) {
+  n <- as.integer(n)
+  paste0(stringi::stri_rand_strings(n, 2, pattern = "[A-Z]"),
+         stringi::stri_rand_strings(n, 1, pattern = "[0-9]"),
+         " ",
+         stringi::stri_rand_strings(n, 1, pattern = "[0-9]"),
+         stringi::stri_rand_strings(n, 2, pattern = "[A-Z]"))
+}
+
+# Generate common UK street name prefixes
+prefixes <- c("High", "Church", "Mill", "School", "Park", "Oak", "Elm", "Pine", "Maple",
+              "Chestnut", "Ash", "Willow", "Spring", "River", "Hill", "Lake", "Sunset",
+              "Forest", "Meadow", "Grove", "Garden", "Valley", "Green", "Wood", "Brook",
+              "Bridge", "Water", "Rose", "Holly", "Ivy", "Fern", "Orchard", "Cedar", "View", "Hazel")
+
+# Generate common UK street name suffixes
+suffixes <- c("Street", "Road", "Lane", "Avenue", "Drive", "Way", "Close", "Terrace", "Place", "Gardens")
+
+# Function to generate UK-like detailed address
+generate_detailed_address <- function(prefixes, suffixes, n) {
+  
+  # Randomly select house number
+  address_numbers <- sample(1:200, n, replace = TRUE)
+  
+  # Randomly select prefixes and suffixes
+  selected_prefixes <- sample(prefixes, n, replace = TRUE)
+  selected_suffixes <- sample(suffixes, n, replace = TRUE)
+  
+  # Combine address numbers, selected prefixes, and suffixes to create street names
+  detailed_address <- paste(address_numbers, selected_prefixes, selected_suffixes)
+  
+  return(detailed_address)
+}
+
+# Generate data
+set.seed(123) 
+selected_city <- sample(city, 100, replace = TRUE)
+selected_country <- sample(country, 100, replace = TRUE)
+postal_code <- generate_postal_code(100)
+detailed_address <- generate_detailed_address(prefixes, suffixes, 100)
+customer_id <- sample(1:100, 100, replace = TRUE)
+
+# Combine data
+address_data <- data.frame(
+  address_id = address_id,
+  city = selected_city,
+  country = selected_country,
+  postal_code = postal_code,
+  detailed_address = detailed_address,
+  customer_id = customer_id,
+  stringsAsFactors = FALSE
+)
+
+# Save data as CSV file
+write.csv(address_data, "address_data.csv", row.names = FALSE)
+```
+
+# for transaction_billing table
+```{r}
+set.seed(123)
+
+# Generate billing IDs from 100 to 199
+billing_id <- 100:199
+quantity <- sample(10:1000, 100, replace = TRUE)
+order_id <- sample(1:100, 100, replace = TRUE)
+
+# Combine data
+transaction_billing_data <- data.frame(
+  billing_id = billing_id,
+  quantity = quantity,
+  order_id = order_id,
+  stringsAsFactors = FALSE
+)
+
+# Save data as CSV file
+write.csv(transaction_billing_data, "transaction_billing_data.csv", row.names = FALSE)
+```
+
+
 
 # database update : seller
 ```{r}
