@@ -26,7 +26,7 @@ jobs:
       - name: Install packages
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          Rscript -e 'install.packages(c("ggplot2","readr","dplyr","RSQLite","digest","stringi","randomNames"))'
+          Rscript -e 'install.packages(c("ggplot2","readr","dplyr","RSQLite","digest","stringi","randomNames","rmarkdown"))'
       - name: Execute R script
         run: |
           Rscript -e "rmarkdown::render('script/script.Rmd')" 
