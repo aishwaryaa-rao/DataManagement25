@@ -344,25 +344,6 @@ address_data <- address_id %>% mutate(
 write.csv(address_data, "address_data.csv", row.names = FALSE)
 ```
 
-## Review
-```{r}
-set.seed(123)
-
-# Generate review IDs from 1 to 100
-review_id <- tibble(review_id = 3001:3100)
-
-#Generate review_score
-set.seed(123)
-review_score <- tibble(review_score = sample(1:5, 100, replace = TRUE))
-
-# Combine data
-review <-review_id %>% mutate(review_score=review_score$review_score,
-                              customer_id=customer_data$customer_id,
-                              product_w_category$product_id)
-
-write.csv(review, "review.csv", row.names = FALSE)
-```
-
 
 ## Product, Promotion, Category
 ### Generate info
@@ -566,6 +547,25 @@ transaction_billing_data <- billing_id %>% mutate(order_id = data_order$order_id
 
 # Save data as CSV file
 write.csv(transaction_billing_data, "transaction_billing_data.csv", row.names = FALSE)
+```
+
+## Review
+```{r}
+set.seed(123)
+
+# Generate review IDs from 1 to 100
+review_id <- tibble(review_id = 3001:3100)
+
+#Generate review_score
+set.seed(123)
+review_score <- tibble(review_score = sample(1:5, 100, replace = TRUE))
+
+# Combine data
+review <-review_id %>% mutate(review_score=review_score$review_score,
+                              customer_id=customer_data$customer_id,
+                              product_w_category$product_id)
+
+write.csv(review, "review.csv", row.names = FALSE)
 ```
 
 
