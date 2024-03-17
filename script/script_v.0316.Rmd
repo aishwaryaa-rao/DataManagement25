@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS provide (
 ```{sql, connection = my_db}
  --Order
  
- CREATE TABLE IF NOT EXISTS order (
+ CREATE TABLE IF NOT EXISTS "order" (
     order_id VARCHAR(50) PRIMARY KEY,
     order_date DATE,
     quantity INT,
@@ -184,7 +184,7 @@ CREATE TABLE IF NOT EXISTS subcategory (
 CREATE TABLE IF NOT EXISTS transaction_billing (
   billing_id INT PRIMARY KEY NOT NULL,
   order_id INT,
-  FOREIGN KEY (order_id) REFERENCES order(order_id)
+  FOREIGN KEY (order_id) REFERENCES "order"(order_id)
 );
 ```
 
@@ -504,7 +504,7 @@ write.csv(provide_data, "provide_data.csv", row.names = FALSE)
 
 
 
-## Shoppingcart_order
+## order
 ```{r}
 # order_id
 set.seed(12)
@@ -619,13 +619,13 @@ RSQLite::dbWriteTable(my_db,"order_data",order_data,overwrite=TRUE)
 ```
 
 ```{sql, connection = my_db}
-INSERT INTO order (order_id, order_date, quantity, customer_id, product_id)
+INSERT INTO "order" (order_id, order_date, quantity, customer_id, product_id)
 SELECT order_id, order_date, quantity, customer_id, product_id FROM order_data;
 ```
 
 ```{sql, connection = my_db}
 SELECT *
-FROM order;
+FROM "order";
 ```
 
 
