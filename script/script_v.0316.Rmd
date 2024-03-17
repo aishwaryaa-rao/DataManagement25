@@ -276,18 +276,24 @@ write.csv(data_seller, "seller_data.csv", row.names = FALSE)
 
 
 ## Address
-```{r}
-# Generate address IDs from 100 to 254
+```{R}
+library(tibble)
+library(dplyr)
+library(stringi)
+
+# Generate address IDs from 1 to 100
 address_id <- tibble(address_id = 1:100)
 
-# Generate city 
-city <- c("London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Liverpool", 
-            "Oxford", "Cambridge", "Cardiff", "Belfast", "Brighton", "Leeds", "Sheffield", "Coventry",
-            "Nottingham", "Leicester", "Newcastle", "Sunderland", "Swansea", "Southampton", "Portsmouth",
-            "York", "Derby", "Reading")
-
-# Generate country 
-country <- c("England", "Scotland", "Wales", "Northern Ireland")
+# Define cities and their corresponding countries correctly
+cities_countries <- tibble(
+  city = c('Coventry', 'Sunderland', 'Sheffield', 'Manchester', 'Newcastle', 'Portsmouth',
+           'Reading', 'Cambridge', 'Oxford', 'Liverpool', 'Birmingham', 'Leicester', 
+           'Southampton', 'Brighton', 'Leeds', 'York', 'Bristol', 'London', 'Nottingham',
+           'Edinburgh', 'Glasgow', 'Cardiff', 'Swansea', 'Belfast'),
+  country = c('England', 'England', 'England', 'England', 'England', 'England',
+              'England', 'England', 'England', 'England', 'England', 'England',
+              'England', 'England', 'England', 'England', 'England', 'England', 'England',
+              'Scotland', 'Scotland', 'Wales', 'Wales', 'Northern Ireland'))
 
 # Generate function for UK-like postal code
 generate_postal_code <- function(n) {
@@ -326,22 +332,23 @@ generate_detailed_address <- function(prefixes, suffixes, n) {
 
 # Generate data
 set.seed(123) 
-selected_city <- tibble(city = sample(city, 100, replace = TRUE))
-selected_country <- tibble(country = sample(country, 100, replace = TRUE))
+indices <- sample(1:nrow(cities_countries), 100, replace = TRUE)
+selected_cities_countries <- cities_countries[indices, ]
+
 postal_code <- tibble(postal_code = generate_postal_code(100))
 detailed_address <- tibble(detailed_address = generate_detailed_address(prefixes, suffixes, 100))
 
 # Combine data
 address_data <- address_id %>% mutate(
-  city = selected_city$city,
-  country = selected_country$country,
+  city = selected_cities_countries$city,
+  country = selected_cities_countries$country,
   postal_code = postal_code$postal_code,
   detailed_address = detailed_address$detailed_address,
   address_owner_id = 1:100
 )
 
 # Save data as CSV file
-write.csv(address_data, "address_data.csv", row.names = FALSE)
+write.csv(address_data, "address_data.csv", row.names=FALSE)
 ```
 
 
