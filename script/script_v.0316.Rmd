@@ -489,9 +489,9 @@ write.csv(promotion_data, "promotion_data.csv", row.names = FALSE)
 ```{r}
 # combine table
 set.seed(12)
-provide_gen <- tibble(seller_id = sample(data_seller$seller_id, 200, replace = TRUE), 
-                       product_id = sample(product_data$product_id, 200,
-                                           replace = TRUE))
+provide_gen <- tibble(seller_id = sample(data_seller$seller_id, 100, replace = TRUE), 
+                       product_id = sample(product_data$product_id, 100,
+                                           replace = FALSE))
 provide <- unique(provide_gen)
 
 provide_data <- provide %>% mutate(provide_id = 1:nrow(provide))
