@@ -29,7 +29,7 @@ jobs:
           Rscript -e 'install.packages(c("ggplot2","readr","dplyr","RSQLite","digest","stringi","randomNames"))'
       - name: Execute R script
         run: |
-          Rscript R/data_validation.R
+          Rscript R/transformation1.R
       - name: Add users
         run: |
           git config --global user.email "aishwarya23.rao@gmail.com"
