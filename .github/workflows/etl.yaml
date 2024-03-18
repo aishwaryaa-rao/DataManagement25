@@ -26,7 +26,7 @@ jobs:
       - name: Install packages
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          Rscript -e 'install.packages(c("ggplot2","readr","dplyr","RSQLite","tidyr","digest","chron","lubridate","stringi","randomNames","DBI"))'
+          Rscript -e 'install.packages(c("ggplot2","readr","dplyr","RSQLite","tidyr","digest","chron","lubridate","randomNames","DBI"))'
       - name: Execute R script
         run: |
           Rscript R/transformation1.R
