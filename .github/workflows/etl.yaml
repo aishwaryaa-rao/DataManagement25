@@ -29,8 +29,8 @@ jobs:
           Rscript -e 'install.packages(c("ggplot2","readr","dplyr","RSQLite","digest","stringi","randomNames","rmarkdown"))'
       - name: Execute R script
         run: |
-          Rscript -e "rmarkdown::render('script/script.Rmd')" 
-      - name: Add files
+          Rscript R/data_validation.R
+      - name: Add users
         run: |
           git config --global user.email "aishwarya23.rao@gmail.com"
           git config --global user.name "aishwaryaa-rao"
@@ -43,6 +43,4 @@ jobs:
         with:
             github_token: ${{ secrets.GITHUB_TOKEN }}
             branch: main
-            
-      
-    
+          
