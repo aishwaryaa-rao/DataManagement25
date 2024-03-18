@@ -34,7 +34,6 @@ jobs:
         run: |
           git config --global user.email "aishwarya23.rao@gmail.com"
           git config --global user.name "aishwaryaa-rao"
-          git add --all figures/
       - name: Commit files
         run: |
           git commit -m "Add regression plot figure"
