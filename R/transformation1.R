@@ -240,6 +240,74 @@ for (folder in entity_folders) {
 
 # Data Validation
 
+# load libraries
+library(RSQLite)
+library(DBI)
+library(lubridate)
+
+# Function to check email format
+check_email_format <- function(email) {
+  valid.email <- grepl("^[A-Za-z0-9._&%+-]+@[A-Za-z0-9.-]+\\.com$", email)
+  return(valid.email)
+}
+
+# Function to check phone number format
+check_phone_format <- function(phone) {
+  valid.phone <- grepl("^0\\d{11}$", phone)
+  return(valid.phone)
+}
+
+# Function to check phone number format for seller
+check_phone_format_seller <- function(phone) {
+  valid.phone.seller <- grepl("^44\\d{10}$", phone)
+  return(valid.phone.seller)
+}
+
+# Function to card number format
+check_card_format <- function(date){
+  valid.date <- grepl("^\\d{16}$", date)
+  return(valid.date)
+}
+
+# Function to check for null names
+check_names_not_null <- function(first_name, last_name) {
+  return(!is.na(first_name) && nchar(trimws(first_name)) > 0 &&
+           !is.na(last_name) && nchar(trimws(last_name)) > 0)
+}
+
+# Function to check for null names
+check_names_not_null.s <- function(catname) {
+  return(!is.na(catname) && nchar(trimws(catname)) > 0)
+}
+
+# Function to check for characters in names
+check_names_only_chars <- function(names_vector) {
+  valid_names <- grepl("^[A-Za-z]+$", names_vector)
+  return(valid_names)
+}
+
+# Function to check for duplicate ids
+check_id <- function(ids, data) {
+  if (length(unique(ids)) != nrow(data)) {
+    return(TRUE)  # Return TRUE if duplicate IDs are found
+  }
+  else {
+    return(NULL)
+  }
+}
+
+# Function to check date
+check_date_format <- function(date){
+  valid.date <- grepl("^\\d{4}-\\d{2}-\\d{2}$", date)
+  return(valid.date)
+}
+
+# Function to check value range
+check_range <- function(value, min_value, max_value) {
+  return(value >= min_value & value <= max_value)
+}
+
+
 # Customer Dataframe
 # Email 
 email_validity.customer <- sapply(ecom_customer_data$email, check_email_format)
