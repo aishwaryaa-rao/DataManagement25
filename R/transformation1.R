@@ -6,101 +6,124 @@ library(DBI)
 library(lubridate)
 library(dplyr)
 library(chron)
+library(tidyr)
 
 # DB connection
 my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
 
 # Create Tables in DB
 
-# Customer table
-RSQLite::dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS customer(
+# Customer
+dbExecute(my_db, "
+CREATE TABLE IF NOT EXISTS customer_table(
   customer_id INT PRIMARY KEY,
   email VARCHAR (100) NOT NULL,
   first_name VARCHAR (100) NOT NULL,
   last_name VARCHAR (100) NOT NULL,
   contact_number INT (11) NOT NULL,
   card_number INT(16)
-);")
+  );
+")
 
-# Product table
-RSQLite::dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS product (
+# Category
+dbExecute(my_db, "
+CREATE TABLE IF NOT EXISTS category_table (
+  category_id INT PRIMARY KEY NOT NULL,
+  category_name VARCHAR (50) NOT NULL,
+  sub_category VARCHAR (50) NOT NULL,
+  category_description VARCHAR (50) NOT NULL
+);
+")
+
+# Product
+dbExecute(my_db, "
+CREATE TABLE IF NOT EXISTS product_table (
   product_id VARCHAR(50) PRIMARY KEY NOT NULL,
-  category_id INT,
+  category_name VARCHAR(50),
   product_name VARCHAR(50),
   product_description TEXT,
   registration_date DATE,
   price FLOAT,
   brand VARCHAR(50),
-  FOREIGN KEY (category_id) REFERENCES category(category_id)
-);")
+  category_description TEXT,
+  sub_category_name VARCHAR(50),
+  FOREIGN KEY (category_description) REFERENCES category_table(category_description),
+  FOREIGN KEY (category_name) REFERENCES category_table(category_name),
+  FOREIGN KEY (sub_category_name) REFERENCES subcategory_table(sub_category_name)
+);
+")
 
-# Promotion table
-RSQLite::dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS promotion (
+# Promotion
+dbExecute(my_db, "
+CREATE TABLE IF NOT EXISTS promotion_table (
   promotion_id VARCHAR(50) PRIMARY KEY NOT NULL,
   category_id INT,
   promo_price FLOAT,
   promotion_description TEXT,
   expiration_date DATE,
   FOREIGN KEY (category_id) REFERENCES category(category_id)
-);")
+);
+")
 
-# Seller table
-RSQLite::dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS seller (
-    seller_id VARCHAR(50) PRIMARY KEY NOT NULL,
-    seller_email VARCHAR(255) NOT NULL,
-    seller_contactnumber INT NOT NULL,
-    seller_name VARCHAR(100) NOT NULL
-);")
+# Seller
+dbExecute(my_db, "
+CREATE TABLE IF NOT EXISTS seller_table (
+    seller_id INT PRIMARY KEY NOT NULL,
+    seller_name VARCHAR(100) NOT NULL,
+    contact INT NOT NULL,
+    email VARCHAR(255) NOT NULL
+    );
+")
 
-# Provide table
-RSQLite::dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS provide (
+# Provide
+dbExecute(my_db, "
+CREATE TABLE IF NOT EXISTS provide_table (
     provide_id VARCHAR(50) PRIMARY KEY NOT NULL,
     seller_id VARCHAR(50),
     product_id VARCHAR(50),
     FOREIGN KEY (seller_id) REFERENCES seller(seller_id),
     FOREIGN KEY (product_id) REFERENCES product(product_id)
-);")
+    );
+")
 
-# Order table
-RSQLite::dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS 'order' (
+# Orders
+dbExecute(my_db, "
+CREATE TABLE IF NOT EXISTS orders_table (
     order_id VARCHAR(50) PRIMARY KEY,
     order_date DATE,
     quantity INT,
     product_id INT, 
     customer_id INT, 
-    FOREIGN KEY (product_id) REFERENCES product(product_id),
-    FOREIGN KEY (customer_id) REFERENCES customer(customer_id)
-);")
+    FOREIGN KEY (product_id) REFERENCES address(address_id),
+    FOREIGN KEY (customer_id) REFERENCES address(address_id)
+);
+")
 
-# Shipping table
-RSQLite::dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS shipping (
-    shippment_id INT PRIMARY KEY,
+# Shipment
+dbExecute(my_db, "
+CREATE TABLE IF NOT EXISTS shipment_table (
+    shipment_id INT PRIMARY KEY,
     billing_id INT,
     shipment_status VARCHAR(50),
     FOREIGN KEY (billing_id) REFERENCES transaction_billing(billing_id)
-);")
+);
+")
 
-# Review table
-RSQLite::dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS review (
+# Review
+dbExecute(my_db, "
+CREATE TABLE IF NOT EXISTS review_table (
   review_id VARCHAR(50) PRIMARY KEY NOT NULL,
   customer_id INT,
   product_id VARCHAR(50),
   review_rating INT(5),
   FOREIGN KEY (customer_id) REFERENCES customer(customer_id),
   FOREIGN KEY (product_id) REFERENCES product(product_id)
-);")
+);
+")
 
-# Address table
-RSQLite::dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS address (
+# Address
+dbExecute(my_db, "
+CREATE TABLE IF NOT EXISTS address_table (
   address_id VARCHAR(50) PRIMARY KEY NOT NULL,
   city VARCHAR (50) NOT NULL,
   country VARCHAR (50) NOT NULL,
@@ -108,39 +131,29 @@ CREATE TABLE IF NOT EXISTS address (
   detailed_address VARCHAR (50) NOT NULL,
   customer_id INT,
   FOREIGN KEY (customer_id) REFERENCES customer(customer_id)
-);")
+);
+")
 
-# Category table
-RSQLite::dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS category (
-  category_id INT PRIMARY KEY NOT NULL,
-  category_name VARCHAR (50) NOT NULL,
-  category_description VARCHAR (50) NOT NULL
-);")
-
-# Sub-category table
-RSQLite::dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS subcategory (
+# Sub-category
+dbExecute(my_db, "
+CREATE TABLE IF NOT EXISTS subcategory_table (
     subcategory_id VARCHAR(50) PRIMARY KEY NOT NULL,
     subcategory_name VARCHAR(50),
     category_id VARCHAR(50),
     FOREIGN KEY (category_id) REFERENCES category(category_id)
-);")
+);
+")
 
-# Transaction billing table
-RSQLite::dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS transaction_billing (
+# Transaction billing
+dbExecute(my_db, "
+CREATE TABLE IF NOT EXISTS transaction_billing_table (
   billing_id INT PRIMARY KEY NOT NULL,
   order_id INT,
-  FOREIGN KEY (order_id) REFERENCES 'order'(order_id)
-);")
+  FOREIGN KEY (order_id) REFERENCES shoppingcart_order(order_id)
+);
+")
 
 # insert data into dataframes
-
-# Load necessary libraries
-library(dplyr)
-library(readr)
-library(tidyr)
 
 # Define the path to the data_upload folder
 data_upload_path <- "data_upload"
@@ -174,43 +187,6 @@ for (entity_folder in subdirectories) {
 # Print the names of the created dataframes
 # print(ls(pattern = "ecom_"))
 
-# Load necessary libraries
-library(dplyr)
-library(readr)
-library(tidyr)
-
-# Define the path to the data_upload folder
-data_upload_path <- "data_upload"
-
-# Get a list of all subdirectories within data_upload
-subdirectories <- list.dirs(data_upload_path, full.names = TRUE, recursive = FALSE)
-
-# Iterate through each subdirectory
-for (entity_folder in subdirectories) {
-  # Extract the entity name from the directory path
-  entity_name <- basename(entity_folder)
-  # Get a list of all CSV files within the entity folder
-  csv_files <- list.files(entity_folder, pattern = "*.csv", full.names = TRUE)
-  # Initialize an empty dataframe to store the merged data
-  merged_df <- NULL
-  # Iterate through each CSV file
-  for (csv_file in csv_files) {
-    # Read the CSV file into a dataframe
-    df <- read_csv(csv_file)
-    # Merge the dataframe with the existing merged dataframe
-    if (is.null(merged_df)) {
-      merged_df <- df
-    } else {
-      merged_df <- bind_rows(merged_df, df)
-    }
-  }
-  # Assign the merged dataframe to a variable with the entity name
-  assign(paste0("ecom_", entity_name), merged_df, envir = .GlobalEnv)
-}
-
-# Print the names of the created dataframes
-print(ls(pattern = "ecom_"))
-
 # List all entity folders in the shoes_data directory
 entity_folders <- list.files("data_upload", full.names = TRUE)
 
@@ -235,15 +211,10 @@ for (folder in entity_folders) {
   entity_data[[paste0("ecom_", entity_name)]] <- entity_df
 }
 
-# Now, entity_data contains data frames for each entity with names like "shoe_entity_name"
-# You can access each data frame using entity_data$shoe_entity_name
-
 # Data Validation
 
 # load libraries
-library(RSQLite)
-library(DBI)
-library(lubridate)
+
 
 # Function to check email format
 check_email_format <- function(email) {
@@ -343,8 +314,26 @@ id_is_duplicate_category <- data.frame(ifelse(id_duplicates_category, TRUE, FALS
 # db connection
 my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
 
+# customer
+# Read existing primary keys from the database
+existing_keys <- dbGetQuery(my_db, "SELECT primary_key_column FROM your_table")
+
+# Extract primary keys from your dataframe
+new_keys <- ecom_$primary_key_column  # Replace 'primary_key_column' with the actual column name
+
+# Identify new records by comparing primary keys
+new_records <- ecom_[!new_keys %in% existing_keys$primary_key_column, ]
+
+# Insert new records into the database
+dbWriteTable(con, "your_table", new_records, append = TRUE, row.names = FALSE)
+
+# Close the database connection
+dbDisconnect(con)
+
+
 # Write to customer
 if (all(email_validity.customer) & all(phone_validity.customer) & all(card_validity.customer) & all(name_validity.customer) & all(id_is_duplicate)) {
+  
   RSQLite::dbWriteTable(my_db,"customer",ecom_customer_data)
 } else {
   print("Error: Customer validation failed.")
