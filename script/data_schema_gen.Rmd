@@ -1,0 +1,672 @@
+---
+title: "dm"
+output: html_document
+date: "2024-03-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,comment=NA,attr.source='.numberLines')
+
+rm(list=ls())
+#install.packages("readr")
+#install.packages("RSQLite")
+#install.packages("dplyr")
+#install.packages("chron")
+#install.packages("stringi")
+library(stringi)
+library(readr)
+library(RSQLite)
+library(dplyr)
+library(chron)
+```
+
+#1.1 E-R diagram
+
+#1.2 Schema & tables creation
+
+# DB connection
+```{r connect}
+
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+                            
+```
+
+# Create Tables in DB
+
+## Customer
+
+```{sql, connection = my_db}
+ --customer
+CREATE TABLE IF NOT EXISTS customer_table(
+  customer_id INT PRIMARY KEY,
+  email VARCHAR (100) NOT NULL,
+  first_name VARCHAR (100) NOT NULL,
+  last_name VARCHAR (100) NOT NULL,
+  contact_number INT (11) NOT NULL,
+  card_number INT(16)
+  );
+```
+
+
+## Category
+
+```{sql, connection = my_db}
+-- category
+CREATE TABLE IF NOT EXISTS category_table (
+  category_id INT PRIMARY KEY NOT NULL,
+  category_name VARCHAR (50) NOT NULL,
+  sub_category VARCHAR (50) NOT NULL,
+  category_description VARCHAR (50) NOT NULL
+);
+```
+
+
+## Product
+
+```{sql, connection = my_db}
+-- product
+CREATE TABLE IF NOT EXISTS product_table (
+  product_id VARCHAR(50) PRIMARY KEY NOT NULL,
+  category_name VARCHAR(50),
+  product_name VARCHAR(50),
+  product_description TEXT,
+  registration_date DATE,
+  price FLOAT,
+  brand VARCHAR(50),
+  category_description TEXT,
+  sub_category_name VARCHAR(50),
+  FOREIGN KEY (category_description) REFERENCES category_table(category_description),
+  FOREIGN KEY (category_name) REFERENCES category_table(category_name),
+  FOREIGN KEY (sub_category_name) REFERENCES sub_category_table(sub_category_name)
+
+
+);
+
+```
+
+```{sql, connection = my_db}
+DROP TABLE product_table
+
+```
+`
+
+
+## Promotion
+
+```{sql, connection = my_db}
+-- promotion
+CREATE TABLE IF NOT EXISTS promotion_table (
+  promotion_id VARCHAR(50) PRIMARY KEY NOT NULL,
+  category_id INT,
+  promo_price FLOAT,
+  promotion_description TEXT,
+  expiration_date DATE,
+  FOREIGN KEY (category_id) REFERENCES category(category_id)
+);
+
+```
+
+
+## Seller
+
+```{sql connection=my_db}
+--seller
+CREATE TABLE IF NOT EXISTS seller_table (
+    seller_id INT PRIMARY KEY NOT NULL,
+    seller_name VARCHAR(100) NOT NULL,
+    contact INT NOT NULL,
+    email VARCHAR(255) NOT NULL
+    
+    
+    );
+```
+
+
+## Provide
+
+```{sql connection=my_db}
+--provide
+CREATE TABLE IF NOT EXISTS provide_table (
+    provide_id VARCHAR(50) PRIMARY KEY NOT NULL,
+    seller_id VARCHAR(50),
+    product_id VARCHAR(50),
+    FOREIGN KEY (seller_id) REFERENCES seller(seller_id),
+    FOREIGN KEY (product_id) REFERENCES product(product_id)
+    );
+```
+
+
+
+## orders
+```{sql, connection = my_db}
+ --orders
+ 
+ CREATE TABLE IF NOT EXISTS orders_table (
+    order_id VARCHAR(50) PRIMARY KEY,
+    order_date DATE,
+    quantity INT,
+    product_id INT, 
+    customer_id INT, 
+    FOREIGN KEY (product_id) REFERENCES address(address_id)
+    FOREIGN KEY (customer_id) REFERENCES address(address_id)
+);
+
+```
+
+
+## Shippment
+
+```{sql connection=my_db}
+--shippment
+CREATE TABLE IF NOT EXISTS shippment_table (
+    shippment_id INT PRIMARY KEY,
+    billing_id INT,
+    shipment_status VARCHAR(50),
+    FOREIGN KEY (billing_id) REFERENCES transaction_billing(billing_id)
+);
+
+```
+
+
+
+## Review
+
+```{sql, connection = my_db}
+-- review
+CREATE TABLE IF NOT EXISTS review_table (
+  review_id VARCHAR(50) PRIMARY KEY NOT NULL,
+  customer_id INT,
+  product_id VARCHAR(50),
+  review_rating INT(5),
+  FOREIGN KEY (customer_id) REFERENCES customer(customer_id),
+  FOREIGN KEY (product_id) REFERENCES product(product_id)
+);
+
+```
+
+
+
+## Address
+
+```{sql, connection = my_db}
+-- address
+CREATE TABLE IF NOT EXISTS address_table (
+  address_id VARCHAR(50) PRIMARY KEY NOT NULL,
+  city VARCHAR (50) NOT NULL,
+  country VARCHAR (50) NOT NULL,
+  postal_code VARCHAR (50) NOT NULL,
+  detailed_address VARCHAR (50) NOT NULL,
+  customer_id INT,
+  FOREIGN KEY (customer_id) REFERENCES customer(customer_id)
+);
+```
+
+
+
+## Sub-category
+
+```{sql connection=my_db}
+--Sub-category
+CREATE TABLE IF NOT EXISTS subcategory_table (
+    subcategory_id VARCHAR(50) PRIMARY KEY NOT NULL,
+    subcategory_name VARCHAR(50),
+    category_id VARCHAR(50),
+    FOREIGN KEY (category_id) REFERENCES category(category_id)
+    );
+```
+
+
+
+## Transaction billing
+
+```{sql, connection = my_db}
+-- transaction_billing
+CREATE TABLE IF NOT EXISTS transaction_billing_table (
+  billing_id INT PRIMARY KEY NOT NULL,
+  order_id INT,
+  FOREIGN KEY (order_id) REFERENCES shoppingcart_order(order_id)
+);
+```
+
+# 2.1 synthetic data generation
+
+## Customer
+
+```{r}
+set.seed(123)
+
+# Generate customer IDs from 1 to 100
+customer_id <- 1:100
+
+# Generate fake names
+first_names <- c("John", "Alice", "Bob", "Emily", "Michael", "Sophia", "William", "Emma", "Daniel", "Olivia","Liam", "Mia", "Noah", "Ava", "James", "Charlotte", "Benjamin", "Amelia", "Ethan", "Ella")
+last_names <- c("Smith", "Johnson", "Brown", "Davis", "Wilson", "Taylor", "Clark", "Walker", "Green", "Hall","Harris", "Roberts", "Lopez", "Hill", "King", "Wright", "Scott", "Adams", "Baker", "Carter")
+first_name <- sample(first_names, size = 100, replace = TRUE)
+last_name <- sample(last_names, size = 100, replace = TRUE)
+
+
+# phone numbers with country code starting with 0 and 7 or 9 after that
+phone_numbers <- paste0("044-", sample(c(7, 9), size = 100, replace = TRUE), sample(1000000000:9999999999, size = 100, replace = TRUE))
+
+
+# Generate customer emails by combining names and IDs
+customer_emails <- paste0(first_name, ".", last_name, customer_id, "@gmail.com")
+
+#Generate card_number
+generate_unique_numbers <- function(n, digits) {
+  unique_numbers <- character(0) 
+  while(length(unique_numbers) < n) {
+    number <- paste0(sample(0:9, digits, replace = TRUE), collapse = "")
+    if(!number %in% unique_numbers) {
+      unique_numbers <- c(unique_numbers, number)
+    }
+  }
+  unique_numbers
+}
+card_number <- generate_unique_numbers(100, 16)
+
+# Combine data
+customer_file <- data.frame(
+  customer_id = customer_id,
+  email = customer_emails,
+  first_name = first_name,
+  last_name = last_name,
+  contact_number = phone_numbers,
+card_number=card_number
+)
+
+# Save data as CSV file
+write.csv(customer_file, "customer_file.csv", row.names = FALSE)
+
+
+```
+
+## Product, Promotion, Category & subcategory
+
+```{r}
+# Set seed for reproducibility
+set.seed(123)
+
+# Generate category names
+category_names <- c("Electronics", "Clothing","Home & Garden","Furniture","Kitchen_Appliances","Sports_Outdoor","Beauty_Cosmetics","Toys_Games","Automotive","Pet_Supplies")
+
+# Sample sub category types
+Electronics <- c("Television", "DVD", "Refridgerator", "Printer", "Mobile phone", "microwave","heater")
+Clothing <- c("shirts", "ties", "sarees", "tops", "womens wear", "socks","belts")
+Home_Garden <- c("flowers", "pots", "air freshners", "carpets", "bins", "mops","instant heater")
+Furniture <- c("sofas", "chairs", "tables", "beds", "cabinets", "desks", "bookshelves")
+Kitchen_Appliances<- c("blender", "toaster", "coffee maker", "food processor", "juicer, mixer", "microwave")
+Sports_Outdoor <- c("camping gear", "bicycles", "sports equipment", "hiking gear", "fishing gear","outdoor clothing", "fitness equipment")
+Beauty_Cosmetics<- c("makeup", "skincare products", "haircare products", "perfumes", "grooming tools", "beauty accessories", "nail care")
+Toys_Games <- c("action figures", "board games", "puzzles", "dolls", "educational toys", "outdoor play equipment", "building blocks")
+Automotive <- c("car accessories", "tools", "car care products", "maintenance supplies", "interior accessories", "exterior accessories", "car electronics")
+Pet_Supplies <- c("pet food", "pet toys", "pet grooming supplies", "beds and furniture", "litter boxes", "collars and leashes", "carriers and travel products")
+
+
+# Generate sub category  names
+category_type <- tibble(category_name = c(sample(Electronics, size = 10, replace = TRUE), sample(Clothing, size = 10, replace = TRUE),sample(Home_Garden, size = 10, replace = TRUE),sample(Furniture, size = 10, replace = TRUE),sample(Kitchen_Appliances, size = 10, replace = TRUE),sample(Sports_Outdoor, size = 10, replace = TRUE),sample(Beauty_Cosmetics, size = 10, replace = TRUE),sample(Toys_Games, size = 10, replace = TRUE),sample(Automotive, size = 10, replace = TRUE),sample(Pet_Supplies, size = 10, replace = TRUE)))
+
+# Generate category descriptions
+category_descriptions <- c("Electronics item", "clothing item","home items","Furniture items","Kitchen items","Sports items","Beauty products","Games","vehicle parts","pet supplies")
+
+# Combine data
+category_tibble <- tibble(category_name = rep(category_names, each = 10),
+                   sub_category = category_type$category_name,
+                   category_description = rep(category_descriptions, each = 10)
+)
+
+# Load necessary libraries
+library(stringi)  # For generating random strings
+library(lubridate)  # For handling dates
+
+# Number of rows you want to generate
+N <- 100
+
+# product_id: Random unique alphanumeric strings (Let's keep it simple - 10 characters)
+set.seed(1)
+product_id <- stri_rand_strings(N, 10, pattern = "[A-Za-z0-9]")
+
+# product_name: Let's simulate product names by combining random adjectives and nouns
+adjectives <- c("Amazing", "Portable", "Eco-friendly", "Innovative", "Essential", "Compact", "Durable", "Wireless", "High-quality", "Smart")
+
+# product_description: Let's generate some placeholder text
+product_description <- paste("This", sample(adjectives, N, replace = TRUE), "is one of a kind. It offers unparalleled performance and convenience.")
+
+# price: Random prices between $10.00 and $1000.00
+price <- round(runif(N, min = 10, max = 1000), 2)
+
+# brand: Sample brand names
+brands <- c("TechGuru", "InnoVate", "EcoTech", "NextGen", "UltraGear", "PrimeTech", "Elevate", "SonicPlus", "FutureVision", "EcoDrive")
+brand <- sample(brands, N, replace = TRUE)
+
+# Registration date
+registration_date <- tibble(registration_date = sample(seq(as.Date('2022/01/01'), as.Date('2024/02/10'), by="day"), 100))
+
+# Combine data
+product_w_category <- category_tibble %>% mutate(product_id,
+                                          product_name = paste(adjectives, sub_category),
+                                          product_description = product_description, 
+                                          price, 
+                                          brand,
+                                          registration_date)
+
+# category_info
+category <- tibble(name = unique(product_w_category$category_name))
+category_info_w_promotion <- category %>% mutate(category_id = 1:10)
+
+product_file <- product_w_category %>% select(product_id, product_name, product_description, 
+                                         price, brand, registration_date, category_name, 
+                                         sub_category, category_description)
+
+# promotion info
+promotion_id <- c("DC10", " " , "DC20", "DC25", " ", " ", " ", "DC15", "DC30", " ")
+promotion_price <- c(0.9, 1, 0.8, 0.75, 1, 1, 1, 0.85, 0.7, 1)
+promotion_description <- c("Earth Day Eco-Savings", " ",
+  "Cinco de Mayo Fiesta Sale", "Flag Day Findings", " ", " ", " ",
+  "Groundhog Day Deal", "Loyalty Deal", " ")
+promo_expiration_date <- c("2024-04-15", " ", "2024-03-22", "2024-06-25", " ", " ", " ", "2024-03-09", "2024-03-15", " ")
+
+category_info_w_promotion <- category %>% mutate(category_id = 1:10, 
+                                                 promotion_id, promotion_price,
+                                                 promotion_description, promo_expiration_date)
+
+
+product_cat <- left_join(product_file, category_info_w_promotion, join_by(category_name == name))
+
+product_data <- product_cat %>% select(product_id, category_id, product_name,
+                                       product_description, price, brand, registration_date)
+
+category_data_dup <- product_cat %>% select(category_id, category_name, sub_category, 
+                                        category_description, promotion_id)
+
+promotion_data_dup <- product_cat %>% select(promotion_id, promotion_price,
+                                             promotion_description,
+                                             promotion_description,
+                                             promo_expiration_date, 
+                                             category_id)
+category_file <- unique(category_data_dup)
+promotion_file <- unique(promotion_data_dup)
+promotion_file <- promotion_file %>% filter(promotion_price < 1)
+
+
+sub_category_id <- tibble(sub_category_id = 1:60)
+sub_category_file <- sub_category_id %>% mutate(sub_category_name = category_file$sub_category, category_id = category_file$category_id)
+category_file <- unique(category_file %>% select(category_id, category_name, 
+                                            category_description))
+
+write.csv(product_file, "product_file.csv", row.names = FALSE)
+write.csv(category_file, "category_file.csv", row.names = FALSE)
+write.csv(sub_category_file, "sub_category_file.csv", row.names = FALSE)
+write.csv(promotion_file, "promotion_file.csv", row.names = FALSE)
+
+```
+
+
+## orders
+
+```{r}
+# order_id
+set.seed(12)
+order_id <- tibble(order_id = unique(round(runif(80, 700, 799), 0)))
+
+# customer_id
+set.seed(1)
+order_customer <- tibble(customer_id = round(runif(57, 1, 100),0))
+
+# quantity
+set.seed(13)
+order_quantity <- tibble(quantity = (round(runif(57, 1, 10), 0)))
+
+# order_date (yyyy/mm/dd)
+set.seed(13)
+order_date <- tibble(order_date = sample(seq(as.Date('2023/01/01'), as.Date('2024/02/29'), by="day"), 57))
+
+# order_data # product_id should be mutated 
+set.seed(1)
+order_file <- order_id %>% mutate(quantity = order_quantity$quantity, 
+                                  order_date = order_date$order_date, 
+                                  customer_id = order_customer$customer_id, 
+                                  product_id = sample(product_w_category$product_id, 57))
+# Save data as CSV file
+write.csv(order_file, "order_file.csv", row.names = FALSE)
+
+```
+
+## Transaction_billing
+
+```{r}
+set.seed(123)
+
+# Generate billing IDs from 100 to 199
+billing_id <- tibble(billing_id = 101:157)
+
+# Combine data
+transaction_billing_file <- billing_id %>% mutate(order_id = order_file$order_id)
+
+# Save data as CSV file
+write.csv(transaction_billing_file, "transaction_billing_file.csv", row.names = FALSE)
+```
+
+## Shipping
+```{r}
+set.seed(1)
+
+# Sample shipment-status
+shipment_status <- c("Shipped","In-Transit","Out for Delivery","Delivered")
+
+# Generate data value
+shipment_status_data <- tibble(shippment_status = sample(shipment_status, size = 57, replace = TRUE))
+shipping_id <- tibble(shipping_id = 1001:1057)
+shipping_file <- shipping_id %>% mutate(billing_id = transaction_billing_file$billing_id,
+                                  shipment_status = shipment_status_data$shippment_status)
+
+# Save data as CSV file
+write.csv(shipping_file, "shipping_file.csv", row.names = FALSE)
+
+```
+
+
+
+## Address
+
+```{R}
+library(tibble)
+library(dplyr)
+library(stringi)
+
+# Generate address IDs from 1 to 100
+address_id <- tibble(address_id = 1:100)
+
+# Define cities and their corresponding countries correctly
+cities_countries <- tibble(
+  city = c('Coventry', 'Sunderland', 'Sheffield', 'Manchester', 'Newcastle', 'Portsmouth',
+           'Reading', 'Cambridge', 'Oxford', 'Liverpool', 'Birmingham', 'Leicester', 
+           'Southampton', 'Brighton', 'Leeds', 'York', 'Bristol', 'London', 'Nottingham',
+           'Edinburgh', 'Glasgow', 'Cardiff', 'Swansea', 'Belfast'),
+  country = c('England', 'England', 'England', 'England', 'England', 'England',
+              'England', 'England', 'England', 'England', 'England', 'England',
+              'England', 'England', 'England', 'England', 'England', 'England', 'England',
+              'Scotland', 'Scotland', 'Wales', 'Wales', 'Northern Ireland'))
+
+# Generate function for UK-like postal code
+generate_postal_code <- function(n) {
+  n <- as.integer(n)
+  paste0(stringi::stri_rand_strings(n, 2, pattern = "[A-Z]"),
+         stringi::stri_rand_strings(n, 1, pattern = "[0-9]"),
+         " ",
+         stringi::stri_rand_strings(n, 1, pattern = "[0-9]"),
+         stringi::stri_rand_strings(n, 2, pattern = "[A-Z]"))
+}
+
+# Generate common UK street name prefixes
+prefixes <- c("High", "Church", "Mill", "School", "Park", "Oak", "Elm", "Pine", "Maple",
+              "Chestnut", "Ash", "Willow", "Spring", "River", "Hill", "Lake", "Sunset",
+              "Forest", "Meadow", "Grove", "Garden", "Valley", "Green", "Wood", "Brook",
+              "Bridge", "Water", "Rose", "Holly", "Ivy", "Fern", "Orchard", "Cedar", "View", "Hazel")
+
+# Generate common UK street name suffixes
+suffixes <- c("Street", "Road", "Lane", "Avenue", "Drive", "Way", "Close", "Terrace", "Place", "Gardens")
+
+# Function to generate UK-like detailed address
+generate_detailed_address <- function(prefixes, suffixes, n) {
+  
+  # Randomly select house number
+  address_numbers <- sample(1:200, n, replace = TRUE)
+  
+  # Randomly select prefixes and suffixes
+  selected_prefixes <- sample(prefixes, n, replace = TRUE)
+  selected_suffixes <- sample(suffixes, n, replace = TRUE)
+  
+  # Combine address numbers, selected prefixes, and suffixes to create street names
+  detailed_address <- paste(address_numbers, selected_prefixes, selected_suffixes)
+  
+  return(detailed_address)
+}
+
+# Generate data
+set.seed(123) 
+indices <- sample(1:nrow(cities_countries), 100, replace = TRUE)
+selected_cities_countries <- cities_countries[indices, ]
+
+postal_code <- tibble(postal_code = generate_postal_code(100))
+detailed_address <- tibble(detailed_address = generate_detailed_address(prefixes, suffixes, 100))
+
+# Combine data
+address_file <- address_id %>% mutate(
+  city = selected_cities_countries$city,
+  country = selected_cities_countries$country,
+  postal_code = postal_code$postal_code,
+  detailed_address = detailed_address$detailed_address,
+  customer_id = 1:100
+)
+
+# Save data as CSV file
+write.csv(address_file, "address_file.csv", row.names=FALSE)
+```
+
+## Seller
+
+```{r}
+# seller_id : Start from 101
+set.seed(11)
+seller_id <- tibble(seller_id = 101:154)
+
+# seller_name
+# install.packages('randomNames')
+library('randomNames')
+
+seller_name <- randomNames::randomNames(54, which.names = 'first',
+                                        sample.with.replacement = FALSE,
+                                        return.complete.data = TRUE)
+
+# contact_number
+set.seed(11)
+seller_contact <- tibble(contact = unique(round(runif(54, 440000000000, 449999999999),0)))
+
+# seller_email
+#install.packages('stringi')
+library(stringi)
+set.seed(11)
+seller_email <- tibble(email = paste0(seller_name$first_name, round(runif(54,1,100),0),
+                              "@gmail.com"
+                              ))
+
+seller_file <- seller_id %>% mutate(seller_name = seller_name$first_name, 
+                                    contact = seller_contact$contact, 
+                                    email = seller_email$email)
+# Save data as CSV file
+write.csv(seller_file, "seller_file.csv", row.names = FALSE)
+
+```
+
+## Review
+
+```{r}
+set.seed(123)
+
+# Generate review IDs from 1 to 100
+review_id <- tibble(review_id = 3001:3100)
+
+#Generate review_score
+set.seed(123)
+review_score <- tibble(review_score = sample(1:5, 100, replace = TRUE))
+
+# Combine data
+review_file <-review_id %>% mutate(review_score=review_score$review_score,
+                              customer_id=customer_file$customer_id,
+                              product_id = product_w_category$product_id)
+
+write.csv(review_file, "review_file.csv", row.names = FALSE)
+```
+
+
+## provide(junction)
+
+```{r}
+# combine table
+set.seed(12)
+provide_gen <- tibble(seller_id = sample(seller_file$seller_id, 100, replace = TRUE), 
+                       product_id = sample(product_file$product_id, 100,
+                                           replace = FALSE))
+provide <- unique(provide_gen)
+
+provide_file <- provide %>% mutate(provide_id = 1:nrow(provide))
+
+
+# Save data as CSV file
+write.csv(provide_file, "provide_file.csv", row.names = FALSE)
+
+```
+
+# 2.2 Data quality check and validation
+
+Use **PRAGMA table_info()** to verify the primary key, column names, data type, and NOT NULL setting of each table we created
+
+```{sql connection=my_db}
+PRAGMA table_info(customer_table);
+```
+
+```{sql connection=my_db}
+PRAGMA table_info(seller_table);
+```
+
+```{sql connection=my_db}
+PRAGMA table_info(orders_table);
+```
+
+```{sql connection=my_db}
+PRAGMA table_info(category_table);
+```
+
+```{sql connection=my_db}
+PRAGMA table_info(subcategory_table);
+```
+
+```{sql connection=my_db}
+PRAGMA table_info(address_table);
+```
+
+```{sql connection=my_db}
+PRAGMA table_info(transaction_billing_table);
+```
+
+```{sql connection=my_db}
+PRAGMA table_info(product_table);
+```
+
+```{sql connection=my_db}
+PRAGMA table_info(promotion_table);
+```
+
+```{sql connection=my_db}
+PRAGMA table_info(shippment_table);
+```
+
+```{sql connection=my_db}
+PRAGMA table_info(review_table);
+```
+
+```{sql connection=my_db}
+PRAGMA table_info(provide_table);
+```
+
