@@ -1,4 +1,4 @@
-"address_id","city","country","postal_code","detailed_address","address_owner_id"
+"address_id","city","country","postal_code","detailed_address","customer_id"
 1,"Leeds","England","AE5 7VH","164 Green Terrace",1
 2,"Nottingham","England","VG2 1TZ","67 Pine Avenue",2
 3,"Brighton","England","GB4 8CW","39 High Avenue",3

@@ -234,7 +234,7 @@ card_number=card_number
 )
 
 # Save data as CSV file
-write.csv(customer_data, "customer_data.csv", row.names = FALSE)
+write.csv(customer_data, "../data_upload/customer_data/customer_data.csv", row.names = FALSE)
 
 
 ```
@@ -269,7 +269,7 @@ data_seller <- seller_id %>% mutate(seller_name = seller_name$first_name,
                                     contact = seller_contact$contact, 
                                     email = seller_email$email)
 # Save data as CSV file
-write.csv(data_seller, "seller_data.csv", row.names = FALSE)
+write.csv(data_seller, "../data_upload/seller_data/seller_data.csv", row.names = FALSE)
 
 ```
 
@@ -348,7 +348,7 @@ address_data <- address_id %>% mutate(
 )
 
 # Save data as CSV file
-write.csv(address_data, "address_data.csv", row.names=FALSE)
+write.csv(address_data, "../data_upload/address_data/address_data.csv", row.names=FALSE)
 ```
 
 
@@ -470,26 +470,26 @@ category_export <- unique(category_data %>% select(category_id, category_name,
 ### Product data
 ```{R}
 # Save data as CSV file
-write.csv(product_data, "product_data.csv", row.names = FALSE)
+write.csv(product_data, "../data_upload/product_data/product_data.csv", row.names = FALSE)
 ```
 
 ### Category data
 ```{R}
 # Save data as CSV file
-write.csv(category_export, "category_data.csv", row.names = FALSE)
+write.csv(category_export, "../data_upload/category_data/category_data.csv", row.names = FALSE)
 ```
 
 ### Sub-category data
 ```{R}
 # Save data as CSV file
-write.csv(sub_category_data, "sub_category_data.csv", row.names = FALSE)
+write.csv(sub_category_data, "../data_upload/sub_category_data/sub_category_data.csv", row.names = FALSE)
 ```
 
 
 ### Promotion data
 ```{R}
 # Save data as CSV file
-write.csv(promotion_data, "promotion_data.csv", row.names = FALSE)
+write.csv(promotion_data, "../data_upload/promotion_data/promotion_data.csv", row.names = FALSE)
 ```
 
 ## provide(junction)
@@ -505,7 +505,7 @@ provide_data <- provide %>% mutate(provide_id = 1:nrow(provide))
 
 
 # Save data as CSV file
-write.csv(provide_data, "provide_data.csv", row.names = FALSE)
+write.csv(provide_data, "../data_upload/provide_data/provide_data.csv", row.names = FALSE)
 
 ```
 
@@ -536,7 +536,7 @@ data_order <- order_id %>% mutate(quantity = order_quantity$quantity,
                                   customer_id = order_customer$customer_id, 
                                   product_id = sample(product_w_category$product_id, 57))
 # Save data as CSV file
-write.csv(data_order, "order_data.csv", row.names = FALSE)
+write.csv(data_order, "../data_upload/order_data/order_data.csv", row.names = FALSE)
 
 ```
 
@@ -553,7 +553,7 @@ billing_id <- tibble(billing_id = 101:157)
 transaction_billing_data <- billing_id %>% mutate(order_id = data_order$order_id)
 
 # Save data as CSV file
-write.csv(transaction_billing_data, "transaction_billing_data.csv", row.names = FALSE)
+write.csv(transaction_billing_data, "../data_upload/transaction_billing_data/transaction_billing_data.csv", row.names = FALSE)
 ```
 
 ## Review
@@ -572,7 +572,7 @@ review <-review_id %>% mutate(review_score=review_score$review_score,
                               customer_id=customer_data$customer_id,
                               product_w_category$product_id)
 
-write.csv(review, "review.csv", row.names = FALSE)
+write.csv(review, "../data_upload/review/review.csv", row.names = FALSE)
 ```
 
 
@@ -591,7 +591,7 @@ shipping <- shipping_id %>% mutate(billing_id = transaction_billing_data$billing
                                   shipment_status = shipment_status_data$shippment_status)
 
 # Save data as CSV file
-write.csv(shipping, "shipping.csv", row.names = FALSE)
+write.csv(shipping, "../data_upload/shipping/shipping.csv", row.names = FALSE)
 
 ```
 
