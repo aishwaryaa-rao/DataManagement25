@@ -84,10 +84,7 @@ CREATE TABLE IF NOT EXISTS product_table (
 
 ```
 
-```{sql, connection = my_db}
-DROP TABLE product_table
 
-```
 `
 
 
@@ -393,7 +390,7 @@ sub_category_file <- sub_category_id %>% mutate(sub_category_name = category_fil
 category_file <- unique(category_file %>% select(category_id, category_name, 
                                             category_description))
 
-write.csv(product_file, "../data_upload/product_data/product_data.csv", row.names = FALSE)
+write.csv(product_data, "../data_upload/product_data/product_data.csv", row.names = FALSE)
 write.csv(category_file, "../data_upload/category_data/category_data.csv", row.names = FALSE)
 write.csv(sub_category_file, "../data_upload/sub_category_data/sub_category_data.csv", row.names = FALSE)
 write.csv(promotion_file, "../data_upload/promotion_data/promotion_data.csv", row.names = FALSE)
