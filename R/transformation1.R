@@ -157,7 +157,6 @@ data_upload_path <- "data_upload"
 
 # Get a list of all subdirectories within data_upload
 subdirectories <- list.dirs(data_upload_path, full.names = TRUE, recursive = FALSE)
-
 # Iterate through each subdirectory
 for (entity_folder in subdirectories) {
   # Extract the entity name from the directory path
@@ -170,15 +169,20 @@ for (entity_folder in subdirectories) {
   for (csv_file in csv_files) {
     # Read the CSV file into a dataframe
     df <- read_csv(csv_file)
-    # Merge the dataframe with the existing merged dataframe
-    if (is.null(merged_df)) {
-      merged_df <- df
-    } else {
-      merged_df <- bind_rows(merged_df, df)
+    # Check if the dataframe is not empty
+    if (!is.null(df) && nrow(df) > 0) {
+      # Merge the dataframe with the existing merged dataframe
+      if (is.null(merged_df)) {
+        merged_df <- df
+      } else {
+        merged_df <- bind_rows(merged_df, df)
+      }
     }
   }
   # Assign the merged dataframe to a variable with the entity name
-  assign(paste0("ecom_", entity_name), merged_df, envir = .GlobalEnv)
+  if (!is.null(merged_df)) {
+    assign(paste0("ecom_", entity_name), merged_df, envir = .GlobalEnv)
+  }
 }
 
 # Print the names of the created dataframes
@@ -242,7 +246,7 @@ check_names_not_null <- function(first_name, last_name) {
 
 # Function to check for null names
 check_names_not_null.s <- function(catname) {
-  return(!is.na(catname) && nchar(trimws(catname)) > 0)
+  return(is.na(catname))
 }
 
 # Function to check for characters in names
@@ -345,273 +349,140 @@ invalid.post.codes <- sapply(ecom_address_data$postal_code, grepl, pattern.postc
 # db connection
 my_db <- RSQLite::dbConnect(RSQLite::SQLite(), db_file_path)
 
+data_exists <- function(db, table_name, criteria) {
+  query <- paste0("SELECT COUNT(*) FROM ", table_name, " WHERE ", criteria, ";")
+  result <- dbGetQuery(db, query)
+  return(result[[1]] > 0)
+}
+
+# Function to insert data into a database table for each entity
+insert_data <- function(db, table_name, data_frame, unique_column) {
+  for (i in 1:nrow(data_frame)) {
+    # Extract row data
+    row_data <- data_frame[i, ]
+    # Extract unique value for validation
+    unique_value <- row_data[[unique_column]]
+    # Check if data already exists
+    if (data_exists(db, table_name, paste0(unique_column, " = '", unique_value, "'"))) {
+      print(paste("Data with", unique_column, unique_value, "already exists in", table_name, ". Skipping insertion."))
+    } else {
+      # Insert data into the table
+      dbWriteTable(db, table_name, row_data, append = TRUE)
+      print(paste("Data with", unique_column, unique_value, "inserted into", table_name))
+    }
+  }
+}
+
 # Write to customer
 invalid_rows_cust <- !(all(email_validity.customer) & all(phone_validity.customer) & all(card_validity.customer) & all(name_validity.customer))
 if (!all(invalid_rows_cust)) {
-  # Read existing primary keys from the database
-  existing_keys_cust <- dbGetQuery(my_db, "SELECT customer_id FROM customer")
-  
-  # Extract primary keys from your dataframe
-  new_keys <- ecom_customer_data$customer_id 
-  
-  # Identify new records by comparing primary keys
-  new_records_cust <- ecom_customer_data[!new_keys %in% existing_keys_cust$customer_id, ]
-  
-  # Insert new records into the database
-  dbWriteTable(my_db, "customer", new_records_cust, append = TRUE, row.names = FALSE)
-  print("Done")
+  insert_data(my_db, "customer", ecom_customer_data, "customer_id")
 } else {
   # Remove rows with failed data validation
   ecom_cust_valid <- ecom_customer_data[!invalid_rows_cust, ]
   # Insert valid records into the database
-  dbWriteTable(my_db, "customer", ecom_cust_valid, append = TRUE, row.names = FALSE)
-  print("Done. Some rows were skipped due to failed validation.")
-}
-# Write to category
-invalid_rows_cat <- !(all(catname_validity.category) & all(catdesc_validity.category))
-if (!all(invalid_rows_cat)) {
-  # Read existing primary keys from the database
-  existing_keys_cat <- dbGetQuery(my_db, "SELECT category_id FROM category")
-  
-  # Extract primary keys from your dataframe
-  new_keys_cat <- ecom_category_data$category_id 
-  
-  # Identify new records by comparing primary keys
-  new_records_cat <- ecom_category_data[!new_keys_cat %in% existing_keys_cat$category_id, ]
-  
-  # Insert new records into the database
-  dbWriteTable(my_db, "category", new_records_cat, append = TRUE, row.names = FALSE)
-  print("Done")
-} else {
-  # Remove rows with failed data validation
-  ecom_cat_valid <- ecom_category_data[!invalid_rows_cat, ]
-  # Insert valid records into the database
-  dbWriteTable(my_db, "category", ecom_cat_valid, append = TRUE, row.names = FALSE)
-  print("Done. Some rows were skipped due to failed validation.")
+  insert_data(my_db, "customer", ecom_cust_valid, "customer_id")
 }
 
 # Write to product
 invalid_rows_prod <- !(all(proname_validity.prod) & all(proname_validity.prod.l) & all(proname_validity.prod.desc) & all(probrand_validity.prod)
                        & all(prodprice_validity.prod) & all(prodate_validity.prod))
-if (!any(invalid_rows_prod)) {
-  # Read existing primary keys from the database
-  existing_keys_prod <- dbGetQuery(my_db, "SELECT product_id FROM product")
-  
-  # Extract primary keys from your dataframe
-  new_keys_prod <- ecom_product_data$product_id 
-  
-  # Identify new records by comparing primary keys
-  new_records_prod <- ecom_product_data[!new_keys_prod %in% existing_keys_prod$product_id, ]
-  
-  # Insert new records into the database
-  dbWriteTable(my_db, "product", new_records_prod, append = TRUE, row.names = FALSE)
-  print("Done")
+if (!all(invalid_rows_prod)) {
+  insert_data(my_db, "product", ecom_product_data, "product_id")
 } else {
   # Remove rows with failed data validation
   ecom_prod_valid <- ecom_product_data[!invalid_rows_prod, ]
   # Insert valid records into the database
-  dbWriteTable(my_db, "product", ecom_prod_valid, append = TRUE, row.names = FALSE)
-  print("Done. Some rows were skipped due to failed validation.")
+  insert_data(my_db, "product", ecom_prod_valid, "product_id")
 }
 
 # Write to promotion
 invalid_rows_promo <- !(all(invalid.discount.codes) & all(discount.validate.promotion))
 if (!any(invalid_rows_promo)) {
-  # Read existing primary keys from the database
-  existing_keys_promo <- dbGetQuery(my_db, "SELECT promotion_id FROM promotion")
-  
-  # Extract primary keys from your dataframe
-  new_keys_promo <- ecom_promotion_data$promotion_id 
-  
-  # Identify new records by comparing primary keys
-  new_records_promo <- ecom_promotion_data[!new_keys_promo %in% existing_keys_promo$promotion_id, ]
-  
-  # Insert new records into the database
-  dbWriteTable(my_db, "promotion", new_records_promo, append = TRUE, row.names = FALSE)
-  print("Done")
+  insert_data(my_db, "promotion", ecom_promotion_data, "promotion_id")
 } else {
   # Remove rows with failed data validation
   ecom_promo_valid <- ecom_promotion_data[!invalid_rows_promo, ]
-  # Insert valid records into the database
-  dbWriteTable(my_db, "promotion", ecom_promo_valid, append = TRUE, row.names = FALSE)
-  print("Done. Some rows were skipped due to failed validation.")
+  insert_data(my_db, "promotion", ecom_promo_valid, "promotion_id")
 }
 
 # Write to address
 invalid_rows_addr <- !(all(invalid.post.codes))
 if (!any(invalid_rows_addr)) {
-  # Read existing primary keys from the database
-  existing_keys_addr <- dbGetQuery(my_db, "SELECT address_id FROM address")
-  
-  # Extract primary keys from your dataframe
-  new_keys_addr <- ecom_address_data$address_id 
-  
-  # Identify new records by comparing primary keys
-  new_records_addr <- ecom_address_data[!new_keys_addr %in% existing_keys_addr$address_id, ]
-  
-  # Insert new records into the database
-  dbWriteTable(my_db, "address", new_records_addr, append = TRUE, row.names = FALSE)
-  print("Done")
+  insert_data(my_db, "address", ecom_address_data, "address_id")
 } else {
   # Remove rows with failed data validation
   ecom_addr_valid <- ecom_address_data[!invalid_rows_addr, ]
-  # Insert valid records into the database
-  dbWriteTable(my_db, "address", ecom_addr_valid, append = TRUE, row.names = FALSE)
-  print("Done. Some rows were skipped due to failed validation.")
+  insert_data(my_db, "address", ecom_addr_valid, "address_id")
 }
 
 # Write to shipping
 # Identify rows with failed data validation
-invalid_rows_ship <- !(all(email_validity.seller) & all(phone_validity.seller))
+invalid_rows_ship <- !(all(invalid_statuses))
 if (!any(invalid_rows_ship)) {
-  # Read existing primary keys from the database
-  existing_keys_ship <- dbGetQuery(my_db, "SELECT shipping_id FROM shipping")
-  
-  # Extract primary keys from your dataframe
-  new_keys_ship <- ecom_shipping$shipping_id 
-  
-  # Identify new records by comparing primary keys
-  new_records_ship <- ecom_shipping[!new_keys_ship %in% existing_keys_ship$shipping_id, ]
-  
-  # Insert new records into the database
-  dbWriteTable(my_db, "shipping", new_records_ship, append = TRUE, row.names = FALSE)
-  print("Done")
+  insert_data(my_db, "shipping", ecom_shipping, "shipping_id")
 } else {
   # Remove rows with failed data validation
   ecom_shipping_valid <- ecom_shipping[!invalid_rows_ship, ]
-  
-  # Insert valid records into the database
-  dbWriteTable(my_db, "shipping", ecom_shipping_valid, append = TRUE, row.names = FALSE)
-  print("Done. Some rows were skipped due to failed validation.")
+  insert_data(my_db, "shipping", ecom_shipping_valid, "shipping_id")
 }
 
 # Write to order
 invalid_rows_order <- !(all(date_validity.order) & all(quantity.validate.ord) & all(prodname_validity.ord))
-if (TRUE) {
-  # Read existing primary keys from the database
-  existing_keys_ord <- dbGetQuery(my_db, "SELECT order_id FROM `order`")
-  
-  # Extract primary keys from your dataframe
-  new_keys_ord <- ecom_order_data$order_id 
-  
-  # Identify new records by comparing primary keys
-  new_records_ord <- ecom_order_data[!new_keys_ord %in% existing_keys_ord$order_id, ]
-  
-  # Insert new records into the database
-  dbWriteTable(my_db, "order", new_records_ord, append = TRUE, row.names = FALSE)
-  print("Done")
+if (!any(invalid_rows_order)) {
+  insert_data(my_db, "`order`", ecom_order_data, "order_id")
 } else {
   # Remove rows with failed data validation
   ecom_ord_valid <- ecom_order_data[!invalid_rows_order, ]
-  # Insert valid records into the database
-  dbWriteTable(my_db, "order", ecom_ord_valid, append = TRUE, row.names = FALSE)
-  print("Done. Some rows were skipped due to failed validation.")
+  insert_data(my_db, "`order`", ecom_ord_valid, "order_id")
 }
 
 # Write to subcategory
 invalid_rows_subcat <- !(all(name_validity.subcat))
 if (!any(invalid_rows_subcat)) {
-  # Read existing primary keys from the database
-  existing_keys_subcat <- dbGetQuery(my_db, "SELECT sub_category_id FROM subcategory")
-  
-  # Extract primary keys from your dataframe
-  new_keys_subcat <- ecom_sub_category_data$sub_category_id 
-  
-  # Identify new records by comparing primary keys
-  new_records_subcat <- ecom_sub_category_data[!new_keys_subcat %in% existing_keys_subcat$sub_category_id, ]
-  
-  # Insert new records into the database
-  dbWriteTable(my_db, "subcategory", new_records_subcat, append = TRUE, row.names = FALSE)
-  print("Done")
+  insert_data(my_db, "subcategory", ecom_sub_category_data, "sub_category_id")
 } else {
   # Remove rows with failed data validation
   ecom_subcat_valid <- ecom_sub_category_data[!invalid_rows_subcat, ]
-  # Insert valid records into the database
-  dbWriteTable(my_db, "subcategory", ecom_subcat_valid, append = TRUE, row.names = FALSE)
-  print("Done. Some rows were skipped due to failed validation.")
+  insert_data(my_db, "subcategory", ecom_subcat_valid, "sub_category_id")
 }
 
 # Write to provide
 if (TRUE) {
   # Read existing primary keys from the database
-  existing_keys_provide <- dbGetQuery(my_db, "SELECT provide_id FROM provide")
-  
-  # Extract primary keys from your dataframe
-  new_keys_provide <- ecom_provide_data$provide_id 
-  
-  # Identify new records by comparing primary keys
-  new_records_provide <- ecom_provide_data[!new_keys_provide %in% existing_keys_provide$provide_id, ]
-  
-  # Insert new records into the database
-  dbWriteTable(my_db, "provide", new_records_provide, append = TRUE, row.names = FALSE)
-  print("Done")
+  insert_data(my_db, "provide", ecom_provide_data, "provide_id")
 } else {
-  print("Error: Provide validation failed.")
+  insert_data(my_db, "provide", ecom_provide_data, "provide_id")
 }
 
 # Write to review
 invalid_rows_rev <- !(all(revscore.validate.review))
 if (!any(invalid_rows_rev)) {
-  # Read existing primary keys from the database
-  existing_keys_review <- dbGetQuery(my_db, "SELECT review_id FROM review")
-  
-  # Extract primary keys from your dataframe
-  new_keys_review <- ecom_review$review_id 
-  
-  # Identify new records by comparing primary keys
-  new_records_review <- ecom_review[!new_keys_review %in% existing_keys_review$review_id, ]
-  
-  # Insert new records into the database
-  dbWriteTable(my_db, "review", new_records_review, append = TRUE, row.names = FALSE)
-  print("Done")
+  insert_data(my_db, "review", ecom_review, "review_id")
 } else {
   # Remove rows with failed data validation
   ecom_rev_valid <- ecom_review[!invalid_rows_rev, ]
   # Insert valid records into the database
-  dbWriteTable(my_db, "review", ecom_rev_valid, append = TRUE, row.names = FALSE)
-  print("Done. Some rows were skipped due to failed validation.")
+  insert_data(my_db, "review", ecom_rev_valid, "review_id")
 }
 
 # Write to seller
 # Identify rows with failed data validation
 invalid_rows_seller <- !(all(email_validity.seller) & all(phone_validity.seller))
 if (!any(invalid_rows_seller)) {
-  # Read existing primary keys from the database
-  existing_keys_seller <- dbGetQuery(my_db, "SELECT seller_id FROM seller")
-  
-  # Extract primary keys from your dataframe
-  new_keys_seller <- ecom_seller_data$seller_id 
-  
-  # Identify new records by comparing primary keys
-  new_records_seller <- ecom_seller_data[!new_keys_seller %in% existing_keys_seller$seller_id, ]
-  
-  # Insert new records into the database
-  dbWriteTable(my_db, "seller", new_records_seller, append = TRUE, row.names = FALSE)
-  print("Done")
+  insert_data(my_db, "seller", ecom_seller_data, "seller_id")
 } else {
   # Remove rows with failed data validation
   ecom_seller_valid <- ecom_seller_data[!invalid_rows_seller, ]
-  # Insert valid records into the database
-  dbWriteTable(my_db, "seller", ecom_seller_valid, append = TRUE, row.names = FALSE)
-  print("Done. Some rows were skipped due to failed validation.")
+  insert_data(my_db, "seller", ecom_seller_valid, "seller_id")
 }
 
 # Write to transaction_billing
 if (TRUE) {
   # Read existing primary keys from the database
-  existing_keys_tb <- dbGetQuery(my_db, "SELECT billing_id FROM transaction_billing")
-  
-  # Extract primary keys from your dataframe
-  new_keys_tb <- ecom_transaction_billing_data$billing_id 
-  
-  # Identify new records by comparing primary keys
-  new_records_tb <- ecom_transaction_billing_data[!new_keys_tb %in% existing_keys_tb$billing_id, ]
-  
-  # Insert new records into the database
-  dbWriteTable(my_db, "transaction_billing", new_records_tb, append = TRUE, row.names = FALSE)
-  print("Done")
+  insert_data(my_db, "transaction_billing", ecom_transaction_billing_data, "billing_id")
 } else {
-  print("Error: transaction_billing validation failed.")
+  insert_data(my_db, "transaction_billing", ecom_seller_ecom_transaction_billing_datavalid, "billing_id")
 }
 
 # Data Analysis 
