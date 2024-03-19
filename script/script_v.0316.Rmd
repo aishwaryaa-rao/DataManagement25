@@ -570,7 +570,7 @@ review_score <- tibble(review_score = sample(1:5, 100, replace = TRUE))
 # Combine data
 review <-review_id %>% mutate(review_score=review_score$review_score,
                               customer_id=customer_data$customer_id,
-                              product_w_category$product_id)
+                              product_id = product_w_category$product_id)
 
 write.csv(review, "../data_upload/review/review.csv", row.names = FALSE)
 ```
