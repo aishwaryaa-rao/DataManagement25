@@ -310,7 +310,7 @@ id_is_duplicate_category <- data.frame(ifelse(id_duplicates_category, TRUE, FALS
 # Append Data into Database
 
 # db connection
-db_file_path <- "/cloud/project/script/e-commerce.db"
+db_file_path <- "script/e-commerce.db"
 my_db <- RSQLite::dbConnect(RSQLite::SQLite(), db_file_path)
 
 # Write to customer
