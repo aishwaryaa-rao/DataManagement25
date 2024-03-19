@@ -10,6 +10,7 @@ library(tidyr)
 library(gridExtra)
 library(ggplot2)
 
+#na
 # DB connection
 db_file_path <- "script/e-commerce.db"
 my_db <- RSQLite::dbConnect(RSQLite::SQLite(),db_file_path)
