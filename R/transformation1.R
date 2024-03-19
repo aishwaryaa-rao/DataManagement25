@@ -325,7 +325,7 @@ if (all(email_validity.customer) & all(phone_validity.customer) & all(card_valid
 }
 
 # Write to category
-if (all(catname_validity.category) &  all(id_is_duplicate_category)) {
+if (all(catname_validity.category)) {
   # Read existing primary keys from the database
   existing_keys_cat <- dbGetQuery(my_db, "SELECT category_id FROM category")
   
@@ -333,7 +333,7 @@ if (all(catname_validity.category) &  all(id_is_duplicate_category)) {
   new_keys_cat <- ecom_category_data$category_id 
   
   # Identify new records by comparing primary keys
-  new_records_cat <- ecom_category_data[!new_keys %in% existing_keys_cat$category_id, ]
+  new_records_cat <- ecom_category_data[!new_keys_cat %in% existing_keys_cat$category_id, ]
   
   # Insert new records into the database
   dbWriteTable(my_db, "category", new_records_cat, append = TRUE, row.names = FALSE)
