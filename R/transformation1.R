@@ -213,9 +213,6 @@ for (folder in entity_folders) {
 
 # Data Validation
 
-# load libraries
-
-
 # Function to check email format
 check_email_format <- function(email) {
   valid.email <- grepl("^[A-Za-z0-9._&%+-]+@[A-Za-z0-9.-]+\\.com$", email)
@@ -224,13 +221,13 @@ check_email_format <- function(email) {
 
 # Function to check phone number format
 check_phone_format <- function(phone) {
-  valid.phone <- grepl("^0\\d{11}$", phone)
+  valid.phone <- grepl("^044-\\d{11}$", phone)
   return(valid.phone)
 }
 
 # Function to check phone number format for seller
 check_phone_format_seller <- function(phone) {
-  valid.phone.seller <- grepl("^44\\d{10}$", phone)
+  valid.phone.seller <- grepl("^044-\\d{11}$", phone)
   return(valid.phone.seller)
 }
 
@@ -312,40 +309,175 @@ id_is_duplicate_category <- data.frame(ifelse(id_duplicates_category, TRUE, FALS
 # Append Data into Database
 
 # db connection
-my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
-
-# customer
-# Read existing primary keys from the database
-existing_keys <- dbGetQuery(my_db, "SELECT primary_key_column FROM your_table")
-
-# Extract primary keys from your dataframe
-new_keys <- ecom_$primary_key_column  # Replace 'primary_key_column' with the actual column name
-
-# Identify new records by comparing primary keys
-new_records <- ecom_[!new_keys %in% existing_keys$primary_key_column, ]
-
-# Insert new records into the database
-dbWriteTable(con, "your_table", new_records, append = TRUE, row.names = FALSE)
-
-# Close the database connection
-dbDisconnect(con)
-
+db_file_path <- "/cloud/project/script/e-commerce.db"
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(), db_file_path)
 
 # Write to customer
-if (all(email_validity.customer) & all(phone_validity.customer) & all(card_validity.customer) & all(name_validity.customer) & all(id_is_duplicate)) {
+if (all(email_validity.customer) & all(phone_validity.customer) & all(card_validity.customer) & all(name_validity.customer)) {
+  # Read existing primary keys from the database
+  existing_keys_cust <- dbGetQuery(my_db, "SELECT customer_id FROM customer_table")
   
-  RSQLite::dbWriteTable(my_db,"customer",ecom_customer_data)
+  # Extract primary keys from your dataframe
+  new_keys <- ecom_customer_data$customer_id 
+  
+  # Identify new records by comparing primary keys
+  new_records_cust <- ecom_customer_data[!new_keys %in% existing_keys_cust$customer_id, ]
+  
+  # Insert new records into the database
+  dbWriteTable(my_db, "customer", new_records_cust, append = TRUE, row.names = FALSE)
+  print("Done")
 } else {
   print("Error: Customer validation failed.")
 }
 
 # Write to category
 if (all(catname_validity.category) &  all(id_is_duplicate_category)) {
-  RSQLite::dbWriteTable(my_db,"category",ecom_category_data)
+  # Read existing primary keys from the database
+  existing_keys_cat <- dbGetQuery(my_db, "SELECT customer_id FROM customer_table")
+  
+  # Extract primary keys from your dataframe
+  new_keys <- ecom_customer_data$customer_id 
+  
+  # Identify new records by comparing primary keys
+  new_records_cust <- ecom_customer_data[!new_keys %in% existing_keys_cust$customer_id, ]
+  
+  # Insert new records into the database
+  dbWriteTable(my_db, "customer", new_records_cust, append = TRUE, row.names = FALSE)
+  print("Done")
 } else {
   print("Error: Category validation failed.")
 }
 
 # Data Analysis 
+# Load required libraries
+library(tidyverse)
+library(gridExtra)
+
+# DB connection
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),db_file_path)
+
+# Extract data from DB: sales analysis
+sales_analysis <- dbGetQuery(my_db, "
+SELECT c.customer_id, city, country, quantity, shipping.shipment_status, price, brand, subcategory.subcategory_name, review_rating, category.category_name, product_name, p.product_id, promo_price, order_date
+FROM customer AS c
+INNER JOIN address AS a
+ON c.customer_id = a.customer_id
+INNER JOIN \"order\" AS o
+ON c.customer_id = o.customer_id
+LEFT JOIN product_table AS p
+ON p.product_id = o.product_id
+LEFT JOIN category AS cat
+ON cat.category_name = p.category_name
+LEFT JOIN transaction_billing AS tb
+ON o.order_id = tb.order_id
+LEFT JOIN shipping AS s
+ON s.billing_id = tb.billing_id
+LEFT JOIN subcategory AS sub
+ON sub.category_id = cat.category_id
+LEFT JOIN review AS r
+ON r.customer_id = c.customer_id
+LEFT JOIN promotion AS promo
+ON promo.category_id = cat.category_id
+")
+
+# Extract data from DB: Seller by product category
+seller <- dbGetQuery(my_db, "
+SELECT category_name, product_name, seller.seller_id, review_score
+FROM product
+LEFT JOIN provide
+ON product.product_id = provide.product_id
+LEFT JOIN seller
+ON provide.seller_id = seller.seller_id
+LEFT JOIN category
+ON product.category_id = category.category_id
+LEFT JOIN review
+ON product.product_id = review.product_w_category$product_id
+")
+
+# Sales_data generation
+sales_data <- sales_analysis %>% 
+  mutate(sales_amount = price * quantity * ifelse(is.na(promo_price), 1, promo_price)) 
+
+# Analysis: Sales trend by category
+category_sales <- sales_data %>% 
+  group_by(category_name) %>% 
+  summarise(sales_amount = sum(sales_amount))
+
+category_plot <- ggplot(category_sales, aes(x = sales_amount, 
+                                            y = reorder(category_name, sales_amount), 
+                                            fill = sales_amount)) + 
+  geom_col() + 
+  geom_vline(aes(xintercept = mean(category_sales$sales_amount), color = "mean"), linetype = "dashed") +
+  scale_color_manual(name = " ", values = c(mean = "red")) +
+  labs(title = "Sales amount by Category", x = "Sales amount", y = "Category") +
+  theme_classic()
+
+# Analysis: Geographical sales
+stats_sales_city <- sales_data %>% 
+  group_by(city) %>% 
+  summarise(sales_amount = sum(sales_amount)) %>% 
+  summarise(mean = mean(sales_amount), sd = sd(sales_amount))
+
+heatmap_plot <- sales_data %>% 
+  group_by(country, city) %>% 
+  summarise(sales_amount = sum(sales_amount)) %>% 
+  mutate(color_condition = case_when(sales_amount > stats_sales_city$mean ~ "1. Over the average",
+                                     sales_amount > (stats_sales_city$mean - stats_sales_city$sd) ~ "2. Slightly below the average", 
+                                     sales_amount > (stats_sales_city$mean - 2 * stats_sales_city$sd) ~ "3. Below the average")) %>%
+  ggplot(aes(x = country, y = city, fill = color_condition)) +
+  geom_tile() +
+  scale_fill_manual(values = c("1. Over the average" = "steelblue1", "2. Slightly below the average" = "lightcyan3", "3. Below the average" = "coral1")) +
+  labs(title = "Geographical Sales Heatmap") +
+  theme_classic()
+
+sales_by_country_plot <- sales_data %>% 
+  group_by(country) %>% 
+  summarise(Total_sales_amount = sum(sales_amount)) %>% 
+  ggplot(aes(x = country, y = Total_sales_amount, fill = Total_sales_amount)) + 
+  geom_col() + 
+  labs(title = "Sales by country") + 
+  theme_classic()
+
+# Analysis: Sales amount by reviews
+reviews_plot <- sales_data %>% 
+  group_by(category_name) %>% 
+  summarise(average_review_score = mean(review_score), sales_amount = sum(sales_amount)) %>% 
+  mutate(color = case_when(sales_amount > mean(category_sales$sales_amount) ~ "1. Over the average sales by category", 
+                           sales_amount < mean(category_sales$sales_amount) ~ "2. Below the average sales by category")) %>%
+  ggplot(aes(x = average_review_score, 
+             y = reorder(category_name, average_review_score), 
+             color = color, 
+             fill = color)) + 
+  geom_point(size = 4) +
+  geom_col(width = 0.01) + 
+  labs(title = "Category by reviews", 
+       subtitle = "(Average sales by category = 75,444 pounds)", 
+       x = "Average review score", 
+       y = "Category") +
+  theme_classic()
+
+# Analysis: Sales trend by date
+sales_data$order_date <- as.Date(sales_data$order_date)
+sales_by_date <- sales_data %>% 
+  group_by(order_date, category_name) %>% 
+  summarise(sales_amount = sum(sales_amount)) %>% 
+  mutate(year = year(order_date), 
+         month = month(order_date)) %>% 
+  mutate(year_month = sprintf("%04d-%02d", year, month))
+
+sales_trend_plot <- ggplot(sales_by_date, aes(x = order_date, y = sales_amount)) + 
+  geom_line() +
+  geom_smooth(method = lm, alpha = 0.3, aes(color = "Trend line")) + 
+  labs(title = "Sales trend over time", 
+       subtitle = "(Average sales amount by date = 13,236 pounds)", 
+       x = "Time", 
+       y = "Total sales") +
+  scale_colour_manual(name = " ", values = c("blue")) +
+  geom_hline(aes(yintercept = mean(sales_by_date$sales_amount), linetype = "Average sales by date"), color = "red") + 
+  scale_linetype_manual(values = 2) +
+  labs(linetype = NULL) +
+  theme_classic()
+
+sales_by_year_month_plot
 
 
