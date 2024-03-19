@@ -89,8 +89,10 @@ CREATE TABLE IF NOT EXISTS `order` (
     order_id VARCHAR(50) PRIMARY KEY,
     order_date DATE,
     quantity INT,
-    product_id INT REFERENCES product(product_id), 
-    customer_id INT REFERENCES customer(customer_id)
+    product_id VARCHAR(50),
+    customer_id INT,
+    FOREIGN KEY (product_id) REFERENCES product(product_id), 
+    FOREIGN KEY (customer_id) REFERENCES customer(customer_id)
 );
 ")
 
@@ -222,7 +224,7 @@ check_phone_format <- function(phone) {
 
 # Function to check phone number format for seller
 check_phone_format_seller <- function(phone) {
-  valid.phone.seller <- grepl("^044-\\d{11}$", phone)
+  valid.phone.seller <- grepl("^44-\\d{11}$", phone)
   return(valid.phone.seller)
 }
 
@@ -270,36 +272,73 @@ check_range <- function(value, min_value, max_value) {
   return(value >= min_value & value <= max_value)
 }
 
-
-# Customer Dataframe
+# Customer 
 # Email 
 email_validity.customer <- sapply(ecom_customer_data$email, check_email_format)
-
 # Phone number validation
 phone_validity.customer <- sapply(ecom_customer_data$contact_number, check_phone_format)
-
 # Card number validation
 card_validity.customer <- sapply(ecom_customer_data$card_number, check_card_format)
-
 # Name validation
 name_validity.customer <- sapply(1:length(ecom_customer_data$first_name), function(i) {
   check_names_not_null(ecom_customer_data$first_name[i], ecom_customer_data$last_name[i])
 })
 
-# ID validation
-# Check for duplicates in the ID column
-id_duplicates <- duplicated(ecom_customer_data$customer_id) | duplicated(ecom_customer_data$customer_id, fromLast = TRUE)
-id_is_duplicate <- data.frame(ifelse(id_duplicates, TRUE, FALSE))
-
-# Category Dataframe
-
-# Category name not null
+# Category
+# name not null
 catname_validity.category <- sapply(ecom_category_data$category_name, check_names_not_null.s)
+# desc check
+catdesc_validity.category <- nchar(ecom_category_data$category_description) < 50
 
-# ID validation
-# Check for duplicates in the ID column
-id_duplicates_category <- duplicated(ecom_category_data$category_id) | duplicated(ecom_category_data$category_id, fromLast = TRUE)
-id_is_duplicate_category <- data.frame(ifelse(id_duplicates_category, TRUE, FALSE))
+# Promotion
+# check discount code
+pattern <- "[A-Z]{2}\\d{2}"
+invalid.discount.codes <- sapply(ecom_promotion_data$promotion_id, grepl, pattern)
+# check discount
+discount.validate.promotion <- ecom_promotion_data$promotion_price < 0.1 | ecom_promotion_data$promotion_price > 1.0
+
+# Seller
+# Email
+email_validity.seller <- sapply(ecom_seller_data$email, check_email_format)
+# Phone number validation
+phone_validity.seller <- sapply(ecom_seller_data$contact, check_phone_format_seller)
+
+# Review
+# check score
+revscore.validate.review <- ecom_review$review_score >= 1 | ecom_review$review_score <= 5
+
+# Order
+# date format
+date_validity.order <- sapply(ecom_order_data$order_date, check_date_format)
+# check quantity
+quantity.validate.ord <- ecom_order_data$quantity >= 1 | ecom_order_data$quantity <= 10
+# product id
+prodname_validity.ord <- sapply(ecom_order_data$product_id, check_names_not_null.s)
+
+# Product
+# Product name not null
+proname_validity.prod <- sapply(ecom_product_data$product_name, check_names_not_null.s)
+proname_validity.prod.l <- nchar(ecom_product_data$product_name) < 50
+proname_validity.prod.desc <- nchar(ecom_product_data$product_description) < 100
+# brand name not null
+probrand_validity.prod <- sapply(ecom_product_data$brand, check_names_not_null.s)
+# price quantity
+prodprice_validity.prod <- ecom_product_data$price <= 10000
+# date format
+prodate_validity.prod <- sapply(ecom_product_data$registration_date, check_date_format)
+
+# Shipping
+valid_status <- c("In-Transit", "Shipped", "Delivered", "Out for Delivery")
+# Check the pattern for each value in the 'Status' column
+invalid_statuses <- ecom_shipping$shipment_status %in% valid_status
+
+# Subcategory
+# name not null
+name_validity.subcat <- sapply(ecom_sub_category_data$sub_category_name, check_names_not_null.s)
+
+# Address
+pattern.postcode <- "^.{3} .{3}$"
+invalid.post.codes <- sapply(ecom_address_data$postal_code, grepl, pattern.postcode)
 
 # Append Data into Database
 
@@ -307,7 +346,8 @@ id_is_duplicate_category <- data.frame(ifelse(id_duplicates_category, TRUE, FALS
 my_db <- RSQLite::dbConnect(RSQLite::SQLite(), db_file_path)
 
 # Write to customer
-if (all(email_validity.customer) & all(phone_validity.customer) & all(card_validity.customer) & all(name_validity.customer)) {
+invalid_rows_cust <- !(all(email_validity.customer) & all(phone_validity.customer) & all(card_validity.customer) & all(name_validity.customer))
+if (!all(invalid_rows_cust)) {
   # Read existing primary keys from the database
   existing_keys_cust <- dbGetQuery(my_db, "SELECT customer_id FROM customer")
   
@@ -321,11 +361,15 @@ if (all(email_validity.customer) & all(phone_validity.customer) & all(card_valid
   dbWriteTable(my_db, "customer", new_records_cust, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: Customer validation failed.")
+  # Remove rows with failed data validation
+  ecom_cust_valid <- ecom_customer_data[!invalid_rows_cust, ]
+  # Insert valid records into the database
+  dbWriteTable(my_db, "customer", ecom_cust_valid, append = TRUE, row.names = FALSE)
+  print("Done. Some rows were skipped due to failed validation.")
 }
-
 # Write to category
-if (all(catname_validity.category)) {
+invalid_rows_cat <- !(all(catname_validity.category) & all(catdesc_validity.category))
+if (!all(invalid_rows_cat)) {
   # Read existing primary keys from the database
   existing_keys_cat <- dbGetQuery(my_db, "SELECT category_id FROM category")
   
@@ -339,11 +383,17 @@ if (all(catname_validity.category)) {
   dbWriteTable(my_db, "category", new_records_cat, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: Category validation failed.")
+  # Remove rows with failed data validation
+  ecom_cat_valid <- ecom_category_data[!invalid_rows_cat, ]
+  # Insert valid records into the database
+  dbWriteTable(my_db, "category", ecom_cat_valid, append = TRUE, row.names = FALSE)
+  print("Done. Some rows were skipped due to failed validation.")
 }
 
 # Write to product
-if (TRUE) {
+invalid_rows_prod <- !(all(proname_validity.prod) & all(proname_validity.prod.l) & all(proname_validity.prod.desc) & all(probrand_validity.prod)
+                       & all(prodprice_validity.prod) & all(prodate_validity.prod))
+if (!any(invalid_rows_prod)) {
   # Read existing primary keys from the database
   existing_keys_prod <- dbGetQuery(my_db, "SELECT product_id FROM product")
   
@@ -357,11 +407,16 @@ if (TRUE) {
   dbWriteTable(my_db, "product", new_records_prod, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: Product validation failed.")
+  # Remove rows with failed data validation
+  ecom_prod_valid <- ecom_product_data[!invalid_rows_prod, ]
+  # Insert valid records into the database
+  dbWriteTable(my_db, "product", ecom_prod_valid, append = TRUE, row.names = FALSE)
+  print("Done. Some rows were skipped due to failed validation.")
 }
 
 # Write to promotion
-if (TRUE) {
+invalid_rows_promo <- !(all(invalid.discount.codes) & all(discount.validate.promotion))
+if (!any(invalid_rows_promo)) {
   # Read existing primary keys from the database
   existing_keys_promo <- dbGetQuery(my_db, "SELECT promotion_id FROM promotion")
   
@@ -375,11 +430,16 @@ if (TRUE) {
   dbWriteTable(my_db, "promotion", new_records_promo, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: Promotion validation failed.")
+  # Remove rows with failed data validation
+  ecom_promo_valid <- ecom_promotion_data[!invalid_rows_promo, ]
+  # Insert valid records into the database
+  dbWriteTable(my_db, "promotion", ecom_promo_valid, append = TRUE, row.names = FALSE)
+  print("Done. Some rows were skipped due to failed validation.")
 }
 
 # Write to address
-if (TRUE) {
+invalid_rows_addr <- !(all(invalid.post.codes))
+if (!any(invalid_rows_addr)) {
   # Read existing primary keys from the database
   existing_keys_addr <- dbGetQuery(my_db, "SELECT address_id FROM address")
   
@@ -393,11 +453,17 @@ if (TRUE) {
   dbWriteTable(my_db, "address", new_records_addr, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: Address validation failed.")
+  # Remove rows with failed data validation
+  ecom_addr_valid <- ecom_address_data[!invalid_rows_addr, ]
+  # Insert valid records into the database
+  dbWriteTable(my_db, "address", ecom_addr_valid, append = TRUE, row.names = FALSE)
+  print("Done. Some rows were skipped due to failed validation.")
 }
 
 # Write to shipping
-if (TRUE) {
+# Identify rows with failed data validation
+invalid_rows_ship <- !(all(email_validity.seller) & all(phone_validity.seller))
+if (!any(invalid_rows_ship)) {
   # Read existing primary keys from the database
   existing_keys_ship <- dbGetQuery(my_db, "SELECT shipping_id FROM shipping")
   
@@ -411,10 +477,16 @@ if (TRUE) {
   dbWriteTable(my_db, "shipping", new_records_ship, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: Shipping validation failed.")
+  # Remove rows with failed data validation
+  ecom_shipping_valid <- ecom_shipping[!invalid_rows_ship, ]
+  
+  # Insert valid records into the database
+  dbWriteTable(my_db, "shipping", ecom_shipping_valid, append = TRUE, row.names = FALSE)
+  print("Done. Some rows were skipped due to failed validation.")
 }
 
 # Write to order
+invalid_rows_order <- !(all(date_validity.order) & all(quantity.validate.ord) & all(prodname_validity.ord))
 if (TRUE) {
   # Read existing primary keys from the database
   existing_keys_ord <- dbGetQuery(my_db, "SELECT order_id FROM `order`")
@@ -429,11 +501,16 @@ if (TRUE) {
   dbWriteTable(my_db, "order", new_records_ord, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: Order validation failed.")
+  # Remove rows with failed data validation
+  ecom_ord_valid <- ecom_order_data[!invalid_rows_order, ]
+  # Insert valid records into the database
+  dbWriteTable(my_db, "order", ecom_ord_valid, append = TRUE, row.names = FALSE)
+  print("Done. Some rows were skipped due to failed validation.")
 }
 
 # Write to subcategory
-if (TRUE) {
+invalid_rows_subcat <- !(all(name_validity.subcat))
+if (!any(invalid_rows_subcat)) {
   # Read existing primary keys from the database
   existing_keys_subcat <- dbGetQuery(my_db, "SELECT sub_category_id FROM subcategory")
   
@@ -447,7 +524,11 @@ if (TRUE) {
   dbWriteTable(my_db, "subcategory", new_records_subcat, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: Sub Category validation failed.")
+  # Remove rows with failed data validation
+  ecom_subcat_valid <- ecom_sub_category_data[!invalid_rows_subcat, ]
+  # Insert valid records into the database
+  dbWriteTable(my_db, "subcategory", ecom_subcat_valid, append = TRUE, row.names = FALSE)
+  print("Done. Some rows were skipped due to failed validation.")
 }
 
 # Write to provide
@@ -469,7 +550,8 @@ if (TRUE) {
 }
 
 # Write to review
-if (TRUE) {
+invalid_rows_rev <- !(all(revscore.validate.review))
+if (!any(invalid_rows_rev)) {
   # Read existing primary keys from the database
   existing_keys_review <- dbGetQuery(my_db, "SELECT review_id FROM review")
   
@@ -483,11 +565,17 @@ if (TRUE) {
   dbWriteTable(my_db, "review", new_records_review, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: Review validation failed.")
+  # Remove rows with failed data validation
+  ecom_rev_valid <- ecom_review[!invalid_rows_rev, ]
+  # Insert valid records into the database
+  dbWriteTable(my_db, "review", ecom_rev_valid, append = TRUE, row.names = FALSE)
+  print("Done. Some rows were skipped due to failed validation.")
 }
 
 # Write to seller
-if (TRUE) {
+# Identify rows with failed data validation
+invalid_rows_seller <- !(all(email_validity.seller) & all(phone_validity.seller))
+if (!any(invalid_rows_seller)) {
   # Read existing primary keys from the database
   existing_keys_seller <- dbGetQuery(my_db, "SELECT seller_id FROM seller")
   
@@ -501,7 +589,11 @@ if (TRUE) {
   dbWriteTable(my_db, "seller", new_records_seller, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: Seller validation failed.")
+  # Remove rows with failed data validation
+  ecom_seller_valid <- ecom_seller_data[!invalid_rows_seller, ]
+  # Insert valid records into the database
+  dbWriteTable(my_db, "seller", ecom_seller_valid, append = TRUE, row.names = FALSE)
+  print("Done. Some rows were skipped due to failed validation.")
 }
 
 # Write to transaction_billing
