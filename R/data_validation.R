@@ -34,7 +34,7 @@ check_names_not_null <- function(first_name, last_name) {
 }
 
 # Function to check for null names
-check_names_not_null <- function(catname) {
+check_names_not_null.s <- function(catname) {
   return(!is.na(catname) && nchar(trimws(catname)) > 0)
 }
 
@@ -96,8 +96,16 @@ cust.name.validity <- data.frame(Name = c(customer_data$first_name, customer_dat
 invalid.name <- subset(cust.name.validity, cust.name.validity == FALSE)
 print(invalid.name)
 
-
 # id
+
+# Check for duplicates in the ID column
+id_duplicates <- duplicated(ecom_customer_data$id) | duplicated(ecom_customer_data$ID_column, fromLast = TRUE)
+
+# Convert the logical vector to indicate if each value is a duplicate
+id_is_duplicate <- ifelse(id_duplicates, TRUE, FALSE)
+
+
+
 if (length(unique(customer_data$customer_id)) != nrow(customer_data)) {
   print("Customer ID is not unique.")
 }

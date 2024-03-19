@@ -17,7 +17,7 @@ my_db <- RSQLite::dbConnect(RSQLite::SQLite(),db_file_path)
 
 # Customer
 dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS customer_table(
+CREATE TABLE IF NOT EXISTS customer(
   customer_id INT PRIMARY KEY,
   email VARCHAR (100) NOT NULL,
   first_name VARCHAR (100) NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS customer_table(
 
 # Category
 dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS category_table (
+CREATE TABLE IF NOT EXISTS category (
   category_id INT PRIMARY KEY NOT NULL,
   category_name VARCHAR (50) NOT NULL,
   sub_category VARCHAR (50) NOT NULL,
@@ -39,25 +39,22 @@ CREATE TABLE IF NOT EXISTS category_table (
 
 # Product
 dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS product_table (
+CREATE TABLE IF NOT EXISTS product (
   product_id VARCHAR(50) PRIMARY KEY NOT NULL,
-  category_name VARCHAR(50),
+  category_id INT,
   product_name VARCHAR(50),
   product_description TEXT,
   registration_date DATE,
   price FLOAT,
   brand VARCHAR(50),
-  category_description TEXT,
-  sub_category_name VARCHAR(50),
-  FOREIGN KEY (category_description) REFERENCES category_table(category_description),
-  FOREIGN KEY (category_name) REFERENCES category_table(category_name),
-  FOREIGN KEY (sub_category_name) REFERENCES subcategory_table(sub_category_name)
+  FOREIGN KEY (category_id) REFERENCES category(category_id)
 );
 ")
 
+
 # Promotion
 dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS promotion_table (
+CREATE TABLE IF NOT EXISTS promotion (
   promotion_id VARCHAR(50) PRIMARY KEY NOT NULL,
   category_id INT,
   promo_price FLOAT,
@@ -69,7 +66,7 @@ CREATE TABLE IF NOT EXISTS promotion_table (
 
 # Seller
 dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS seller_table (
+CREATE TABLE IF NOT EXISTS seller (
     seller_id INT PRIMARY KEY NOT NULL,
     seller_name VARCHAR(100) NOT NULL,
     contact INT NOT NULL,
@@ -79,7 +76,7 @@ CREATE TABLE IF NOT EXISTS seller_table (
 
 # Provide
 dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS provide_table (
+CREATE TABLE IF NOT EXISTS provide (
     provide_id VARCHAR(50) PRIMARY KEY NOT NULL,
     seller_id VARCHAR(50),
     product_id VARCHAR(50),
@@ -88,9 +85,9 @@ CREATE TABLE IF NOT EXISTS provide_table (
     );
 ")
 
-# Orders
+# Order
 dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS orders_table (
+CREATE TABLE IF NOT EXISTS order (
     order_id VARCHAR(50) PRIMARY KEY,
     order_date DATE,
     quantity INT,
@@ -103,7 +100,7 @@ CREATE TABLE IF NOT EXISTS orders_table (
 
 # Shipment
 dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS shipment_table (
+CREATE TABLE IF NOT EXISTS shipping(
     shipment_id INT PRIMARY KEY,
     billing_id INT,
     shipment_status VARCHAR(50),
@@ -113,7 +110,7 @@ CREATE TABLE IF NOT EXISTS shipment_table (
 
 # Review
 dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS review_table (
+CREATE TABLE IF NOT EXISTS review (
   review_id VARCHAR(50) PRIMARY KEY NOT NULL,
   customer_id INT,
   product_id VARCHAR(50),
@@ -316,7 +313,7 @@ my_db <- RSQLite::dbConnect(RSQLite::SQLite(), db_file_path)
 # Write to customer
 if (all(email_validity.customer) & all(phone_validity.customer) & all(card_validity.customer) & all(name_validity.customer)) {
   # Read existing primary keys from the database
-  existing_keys_cust <- dbGetQuery(my_db, "SELECT customer_id FROM customer_table")
+  existing_keys_cust <- dbGetQuery(my_db, "SELECT customer_id FROM customer")
   
   # Extract primary keys from your dataframe
   new_keys <- ecom_customer_data$customer_id 
@@ -348,6 +345,27 @@ if (all(catname_validity.category) &  all(id_is_duplicate_category)) {
 } else {
   print("Error: Category validation failed.")
 }
+
+
+# Write to product
+if (TRUE) {
+  # Read existing primary keys from the database
+  existing_keys_prod <- dbGetQuery(my_db, "SELECT product_id FROM product")
+  
+  # Extract primary keys from your dataframe
+  new_keys_prod <- ecom_product_data$product_id 
+  
+  # Identify new records by comparing primary keys
+  new_records_prod <- ecom_product_data[!new_keys_prod %in% existing_keys_prod$product_id, ]
+  
+  # Insert new records into the database
+  dbWriteTable(my_db, "product", new_records_prod, append = TRUE, row.names = FALSE)
+  print("Done")
+} else {
+  print("Error: Product validation failed.")
+}
+
+
 
 # Data Analysis 
 # Load required libraries
