@@ -327,16 +327,16 @@ if (all(email_validity.customer) & all(phone_validity.customer) & all(card_valid
 # Write to category
 if (all(catname_validity.category) &  all(id_is_duplicate_category)) {
   # Read existing primary keys from the database
-  existing_keys_cat <- dbGetQuery(my_db, "SELECT customer_id FROM customer")
+  existing_keys_cat <- dbGetQuery(my_db, "SELECT category_id FROM category")
   
   # Extract primary keys from your dataframe
-  new_keys <- ecom_customer_data$customer_id 
+  new_keys_cat <- ecom_category_data$category_id 
   
   # Identify new records by comparing primary keys
-  new_records_cust <- ecom_customer_data[!new_keys %in% existing_keys_cust$customer_id, ]
+  new_records_cat <- ecom_category_data[!new_keys %in% existing_keys_cat$category_id, ]
   
   # Insert new records into the database
-  dbWriteTable(my_db, "customer", new_records_cust, append = TRUE, row.names = FALSE)
+  dbWriteTable(my_db, "category", new_records_cat, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
   print("Error: Category validation failed.")
