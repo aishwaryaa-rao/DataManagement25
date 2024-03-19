@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS customer(
 # Category
 dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS category (
-  category_id INT PRIMARY KEY NOT NULL,
+  category_id INT PRIMARY KEY,
   category_name VARCHAR (50) NOT NULL,
   category_description VARCHAR (50) NOT NULL
 );
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS category (
 # Product
 dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS product (
-  product_id VARCHAR(50) PRIMARY KEY NOT NULL,
+  product_id VARCHAR(50) PRIMARY KEY,
   category_id INT,
   product_name VARCHAR(50),
   product_description TEXT,
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS product (
 # Promotion
 dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS promotion (
-  promotion_id VARCHAR(50) PRIMARY KEY NOT NULL,
+  promotion_id VARCHAR(50) PRIMARY KEY,
   category_id INT,
   promotion_price FLOAT,
   promotion_description TEXT,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS promotion (
 # Seller
 dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS seller (
-    seller_id INT PRIMARY KEY NOT NULL,
+    seller_id INT PRIMARY KEY,
     seller_name VARCHAR(100) NOT NULL,
     contact INT NOT NULL,
     email VARCHAR(255) NOT NULL
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS seller (
 # Provide
 dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS provide (
-    provide_id VARCHAR(50) PRIMARY KEY NOT NULL,
+    provide_id VARCHAR(50) PRIMARY KEY,
     seller_id VARCHAR(50) REFERENCES seller(seller_id),
     product_id VARCHAR(50) REFERENCES product(product_id)
     );
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS shipping(
 # Review
 dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS review (
-  review_id VARCHAR(50) PRIMARY KEY NOT NULL,
+  review_id VARCHAR(50) PRIMARY KEY,
   customer_id INT,
   product_id VARCHAR(50),
   review_score INT(5),
@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS review (
 # Address
 dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS address (
-  address_id VARCHAR(50) PRIMARY KEY NOT NULL,
+  address_id VARCHAR(50) PRIMARY KEY,
   city VARCHAR (50) NOT NULL,
   country VARCHAR (50) NOT NULL,
   postal_code VARCHAR (50) NOT NULL,
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS address (
 # Sub-category
 dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS subcategory (
-    sub_category_id VARCHAR(50) PRIMARY KEY NOT NULL,
+    sub_category_id VARCHAR(50) PRIMARY KEY,
     sub_category_name VARCHAR(50),
     category_id VARCHAR(50),
     FOREIGN KEY (category_id) REFERENCES category(category_id)
@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS subcategory (
 # Transaction billing
 dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS transaction_billing (
-  billing_id INT PRIMARY KEY NOT NULL,
+  billing_id INT PRIMARY KEY,
   order_id INT,
   FOREIGN KEY (order_id) REFERENCES `order`(order_id)
 );
