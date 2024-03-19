@@ -7,9 +7,10 @@ library(lubridate)
 library(dplyr)
 library(chron)
 library(tidyr)
+library(ggplot2)
 
 # DB connection
-my_db <- RSQLite::dbConnect(RSQLite::SQLite(),"e-commerce.db")
+my_db <- RSQLite::dbConnect(RSQLite::SQLite(),db_file_path)
 
 # Create Tables in DB
 
@@ -358,7 +359,7 @@ my_db <- RSQLite::dbConnect(RSQLite::SQLite(),db_file_path)
 
 # Extract data from DB: sales analysis
 sales_analysis <- dbGetQuery(my_db, "
-SELECT c.customer_id, city, country, quantity, shipping.shipment_status, price, brand, subcategory.subcategory_name, review_rating, category.category_name, product_name, p.product_id, promo_price, order_date
+SELECT c.customer_id, a.city, a.country, o.quantity, s.shipment_status, p.price, p.brand, sub.subcategory_name, r.review_score, cat.category_name, p.product_name, p.product_id, promo.promo_price, o.order_date
 FROM customer AS c
 INNER JOIN address AS a
 ON c.customer_id = a.customer_id
@@ -370,7 +371,7 @@ LEFT JOIN category AS cat
 ON cat.category_name = p.category_name
 LEFT JOIN transaction_billing AS tb
 ON o.order_id = tb.order_id
-LEFT JOIN shipping AS s
+LEFT JOIN shipping as s
 ON s.billing_id = tb.billing_id
 LEFT JOIN subcategory AS sub
 ON sub.category_id = cat.category_id
@@ -411,6 +412,7 @@ category_plot <- ggplot(category_sales, aes(x = sales_amount,
   scale_color_manual(name = " ", values = c(mean = "red")) +
   labs(title = "Sales amount by Category", x = "Sales amount", y = "Category") +
   theme_classic()
+category_plot
 
 # Analysis: Geographical sales
 stats_sales_city <- sales_data %>% 
@@ -429,6 +431,7 @@ heatmap_plot <- sales_data %>%
   scale_fill_manual(values = c("1. Over the average" = "steelblue1", "2. Slightly below the average" = "lightcyan3", "3. Below the average" = "coral1")) +
   labs(title = "Geographical Sales Heatmap") +
   theme_classic()
+heatmap_plot
 
 sales_by_country_plot <- sales_data %>% 
   group_by(country) %>% 
@@ -437,6 +440,7 @@ sales_by_country_plot <- sales_data %>%
   geom_col() + 
   labs(title = "Sales by country") + 
   theme_classic()
+sales_by_country_plot
 
 # Analysis: Sales amount by reviews
 reviews_plot <- sales_data %>% 
@@ -455,6 +459,7 @@ reviews_plot <- sales_data %>%
        x = "Average review score", 
        y = "Category") +
   theme_classic()
+reviews_plot
 
 # Analysis: Sales trend by date
 sales_data$order_date <- as.Date(sales_data$order_date)
@@ -477,7 +482,7 @@ sales_trend_plot <- ggplot(sales_by_date, aes(x = order_date, y = sales_amount))
   scale_linetype_manual(values = 2) +
   labs(linetype = NULL) +
   theme_classic()
+sales_trend_plot
 
-sales_by_year_month_plot
 
 
