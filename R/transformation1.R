@@ -33,7 +33,6 @@ dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS category (
   category_id INT PRIMARY KEY NOT NULL,
   category_name VARCHAR (50) NOT NULL,
-  sub_category VARCHAR (50) NOT NULL,
   category_description VARCHAR (50) NOT NULL
 );
 ")
@@ -58,9 +57,9 @@ dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS promotion (
   promotion_id VARCHAR(50) PRIMARY KEY NOT NULL,
   category_id INT,
-  promo_price FLOAT,
+  promotion_price FLOAT,
   promotion_description TEXT,
-  expiration_date DATE,
+  promo_expiration_date DATE,
   FOREIGN KEY (category_id) REFERENCES category(category_id)
 );
 ")
@@ -98,7 +97,7 @@ CREATE TABLE IF NOT EXISTS `order` (
 # Shipment
 dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS shipping(
-    shipment_id INT PRIMARY KEY,
+    shipping_id INT PRIMARY KEY,
     billing_id INT,
     shipment_status VARCHAR(50),
     FOREIGN KEY (billing_id) REFERENCES transaction_billing(billing_id)
@@ -133,8 +132,8 @@ CREATE TABLE IF NOT EXISTS address (
 # Sub-category
 dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS subcategory (
-    subcategory_id VARCHAR(50) PRIMARY KEY NOT NULL,
-    subcategory_name VARCHAR(50),
+    sub_category_id VARCHAR(50) PRIMARY KEY NOT NULL,
+    sub_category_name VARCHAR(50),
     category_id VARCHAR(50),
     FOREIGN KEY (category_id) REFERENCES category(category_id)
 );
@@ -343,7 +342,6 @@ if (all(catname_validity.category) &  all(id_is_duplicate_category)) {
   print("Error: Category validation failed.")
 }
 
-
 # Write to product
 if (TRUE) {
   # Read existing primary keys from the database
@@ -368,34 +366,160 @@ if (TRUE) {
   existing_keys_promo <- dbGetQuery(my_db, "SELECT promotion_id FROM promotion")
   
   # Extract primary keys from your dataframe
-  new_keys_promo <- ecom_product_data$promotion_id 
+  new_keys_promo <- ecom_promotion_data$promotion_id 
   
   # Identify new records by comparing primary keys
   new_records_promo <- ecom_promotion_data[!new_keys_promo %in% existing_keys_promo$promotion_id, ]
   
   # Insert new records into the database
-  dbWriteTable(my_db, "promotion", new_records_prod, append = TRUE, row.names = FALSE)
+  dbWriteTable(my_db, "promotion", new_records_promo, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: promotion validation failed.")
+  print("Error: Promotion validation failed.")
+}
+
+# Write to address
+if (TRUE) {
+  # Read existing primary keys from the database
+  existing_keys_addr <- dbGetQuery(my_db, "SELECT address_id FROM address")
+  
+  # Extract primary keys from your dataframe
+  new_keys_addr <- ecom_address_data$address_id 
+  
+  # Identify new records by comparing primary keys
+  new_records_addr <- ecom_address_data[!new_keys_addr %in% existing_keys_addr$address_id, ]
+  
+  # Insert new records into the database
+  dbWriteTable(my_db, "address", new_records_addr, append = TRUE, row.names = FALSE)
+  print("Done")
+} else {
+  print("Error: Address validation failed.")
+}
+
+# Write to shipping
+if (TRUE) {
+  # Read existing primary keys from the database
+  existing_keys_ship <- dbGetQuery(my_db, "SELECT shipping_id FROM shipping")
+  
+  # Extract primary keys from your dataframe
+  new_keys_ship <- ecom_shipping$shipping_id 
+  
+  # Identify new records by comparing primary keys
+  new_records_ship <- ecom_shipping[!new_keys_ship %in% existing_keys_ship$shipping_id, ]
+  
+  # Insert new records into the database
+  dbWriteTable(my_db, "shipping", new_records_ship, append = TRUE, row.names = FALSE)
+  print("Done")
+} else {
+  print("Error: Shipping validation failed.")
+}
+
+# Write to order
+if (TRUE) {
+  # Read existing primary keys from the database
+  existing_keys_ord <- dbGetQuery(my_db, "SELECT order_id FROM `order`")
+  
+  # Extract primary keys from your dataframe
+  new_keys_ord <- ecom_order_data$order_id 
+  
+  # Identify new records by comparing primary keys
+  new_records_ord <- ecom_order_data[!new_keys_ord %in% existing_keys_ord$order_id, ]
+  
+  # Insert new records into the database
+  dbWriteTable(my_db, "order", new_records_ord, append = TRUE, row.names = FALSE)
+  print("Done")
+} else {
+  print("Error: Order validation failed.")
+}
+
+# Write to subcategory
+if (TRUE) {
+  # Read existing primary keys from the database
+  existing_keys_subcat <- dbGetQuery(my_db, "SELECT sub_category_id FROM subcategory")
+  
+  # Extract primary keys from your dataframe
+  new_keys_subcat <- ecom_sub_category_data$sub_category_id 
+  
+  # Identify new records by comparing primary keys
+  new_records_subcat <- ecom_sub_category_data[!new_keys_subcat %in% existing_keys_subcat$sub_category_id, ]
+  
+  # Insert new records into the database
+  dbWriteTable(my_db, "subcategory", new_records_subcat, append = TRUE, row.names = FALSE)
+  print("Done")
+} else {
+  print("Error: Sub Category validation failed.")
 }
 
 # Write to provide
 if (TRUE) {
   # Read existing primary keys from the database
-  existing_keys_promo <- dbGetQuery(my_db, "SELECT promotion_id FROM provide")
+  existing_keys_provide <- dbGetQuery(my_db, "SELECT provide_id FROM provide")
   
   # Extract primary keys from your dataframe
-  new_keys_promo <- ecom_product_data$promotion_id 
+  new_keys_provide <- ecom_provide_data$provide_id 
   
   # Identify new records by comparing primary keys
-  new_records_promo <- ecom_provide_data[!new_keys_promo %in% existing_keys_promo$promotion_id, ]
+  new_records_provide <- ecom_provide_data[!new_keys_provide %in% existing_keys_provide$provide_id, ]
   
   # Insert new records into the database
-  dbWriteTable(my_db, "promotion", new_records_prod, append = TRUE, row.names = FALSE)
+  dbWriteTable(my_db, "provide", new_records_provide, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: promotion validation failed.")
+  print("Error: Provide validation failed.")
+}
+
+# Write to review
+if (TRUE) {
+  # Read existing primary keys from the database
+  existing_keys_review <- dbGetQuery(my_db, "SELECT review_id FROM review")
+  
+  # Extract primary keys from your dataframe
+  new_keys_review <- ecom_review$review_id 
+  
+  # Identify new records by comparing primary keys
+  new_records_review <- ecom_review[!new_keys_review %in% existing_keys_review$review_id, ]
+  
+  # Insert new records into the database
+  dbWriteTable(my_db, "review", new_records_review, append = TRUE, row.names = FALSE)
+  print("Done")
+} else {
+  print("Error: Review validation failed.")
+}
+
+# Write to seller
+if (TRUE) {
+  # Read existing primary keys from the database
+  existing_keys_seller <- dbGetQuery(my_db, "SELECT seller_id FROM seller")
+  
+  # Extract primary keys from your dataframe
+  new_keys_seller <- ecom_seller_data$seller_id 
+  
+  # Identify new records by comparing primary keys
+  new_records_seller <- ecom_seller_data[!new_keys_seller %in% existing_keys_seller$seller_id, ]
+  
+  # Insert new records into the database
+  dbWriteTable(my_db, "seller", new_records_seller, append = TRUE, row.names = FALSE)
+  print("Done")
+} else {
+  print("Error: Seller validation failed.")
+}
+
+# Write to transaction_billing
+if (TRUE) {
+  # Read existing primary keys from the database
+  existing_keys_tb <- dbGetQuery(my_db, "SELECT billing_id FROM transaction_billing")
+  
+  # Extract primary keys from your dataframe
+  new_keys_tb <- ecom_transaction_billing_data$billing_id 
+  
+  # Identify new records by comparing primary keys
+  new_records_tb <- ecom_transaction_billing_data[!new_keys_tb %in% existing_keys_tb$billing_id, ]
+  
+  # Insert new records into the database
+  dbWriteTable(my_db, "transaction_billing", new_records_tb, append = TRUE, row.names = FALSE)
+  print("Done")
+} else {
+  print("Error: transaction_billing validation failed.")
 }
 
 # Data Analysis 
@@ -528,9 +652,9 @@ write.csv(result6, generate_filename("category_wise_sales"), row.names = FALSE)
 # SQL Queries
 sales_query <- " SELECT 
                   customer.customer_id, city, country, quantity, 
-                  shipping.shipment_status, price, brand, subcategory.subcategory_name, 
+                  shipping.shipment_status, price, brand, subcategory.sub_category_name, 
                   review_score, category.category_name, product_name, product.product_id, 
-                  promo_price, order_date
+                  promotion_price, order_date
                 FROM customer
                 INNER JOIN address ON customer.customer_id = address.customer_id
                 INNER JOIN `order`ON customer.customer_id = `order`.customer_id
@@ -559,7 +683,7 @@ sales_analysis <- dbGetQuery(my_db, sales_query)
 seller <- dbGetQuery(my_db, seller_query)
 
 # Sales Data Generation
-sales_data <- sales_analysis %>% mutate(sales_amount = price * quantity * ifelse(is.na(promo_price), 1, promo_price)) 
+sales_data <- sales_analysis %>% mutate(sales_amount = price * quantity * ifelse(is.na(promotion_price), 1, promotion_price)) 
 
 # Sales Trend by Category
 # The average amount of sales by each category is 75,443.85 pounds. Amongst 10 product categories, the sales amount of automotive, 
@@ -589,8 +713,8 @@ ggsave(filename = paste0("figures/sales_trend_by_category_", this_filename_date,
 top_query <- "SELECT 
                 cat.category_id AS parent_category_id,
                 cat.category_name AS parent_category_name,
-                sub.subcategory_id,
-                sub.subcategory_name,
+                sub.sub_category_id,
+                sub.sub_category_name,
                 COUNT(ord.quantity) AS total_sold_units
               FROM `order` ord
               JOIN product prod ON ord.product_id = prod.product_id
@@ -728,16 +852,23 @@ sales_category_query <- "SELECT
 sales_category_data <- dbGetQuery(my_db, sales_category_query)
 sales_category_data$order_date <- as.Date(sales_category_data$order_date)
 
-viz8 <- ggplot(sales_category_data, aes(x = order_date, y = units_sold, color = category_name)) +
-  geom_line() +
-  labs(x = "Order Date", y = "Units Sold", title = "Units Sold by Category Across Time") +
-  scale_color_discrete(name = "Category") +
-  facet_wrap(~ category_name, scales = "free_y", ncol = 2)
-
-# Save the plot with a timestamp
-this_filename_date <- as.character(Sys.Date())
-this_filename_time <- format(Sys.time(), format = "%H_%M")
-ggsave(filename = paste0("figures/unit_sold_by_category_", this_filename_date, "_", this_filename_time, ".png"), plot = viz8, device = "png", width = 10, height = 7)
+# Check if the data contains at least one non-null value for the faceting variable
+if (any(!is.na(sales_category_data$category_name))) {
+  # Create the plot only if the faceting variable has at least one non-null value
+  viz8 <- ggplot(sales_category_data, aes(x = order_date, y = units_sold, color = category_name)) +
+    geom_line() +
+    labs(x = "Order Date", y = "Units Sold", title = "Units Sold by Category Across Time") +
+    scale_color_discrete(name = "Category") +
+    facet_wrap(~ category_name, scales = "free_y", ncol = 2)
+  
+  # Save the plot with a timestamp
+  this_filename_date <- as.character(Sys.Date())
+  this_filename_time <- format(Sys.time(), format = "%H_%M")
+  ggsave(filename = paste0("figures/unit_sold_by_category_", this_filename_date, "_", this_filename_time, ".png"), 
+         plot = viz8, device = "png", width = 10, height = 7)
+} else {
+  print("Faceting variable has no valid values.")
+}
 
 # Price Distribution
 price_distribution_query <- "SELECT
@@ -754,7 +885,7 @@ price_distribution_query <- "SELECT
                               WHEN price BETWEEN 900 AND 999 THEN '900-999'
                               ELSE '1000+' END AS price_range,
                               COUNT(*) AS product_count
-                              FROM product_data
+                              FROM product
                               GROUP BY price_range
                               ORDER BY price_range"
 
