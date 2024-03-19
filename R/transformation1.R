@@ -79,10 +79,8 @@ CREATE TABLE IF NOT EXISTS seller (
 dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS provide (
     provide_id VARCHAR(50) PRIMARY KEY NOT NULL,
-    seller_id VARCHAR(50),
-    product_id VARCHAR(50),
-    FOREIGN KEY (seller_id) REFERENCES seller(seller_id),
-    FOREIGN KEY (product_id) REFERENCES product(product_id)
+    seller_id VARCHAR(50) REFERENCES seller(seller_id),
+    product_id VARCHAR(50) REFERENCES product(product_id)
     );
 ")
 
@@ -92,10 +90,8 @@ CREATE TABLE IF NOT EXISTS `order` (
     order_id VARCHAR(50) PRIMARY KEY,
     order_date DATE,
     quantity INT,
-    product_id INT, 
-    customer_id INT, 
-    FOREIGN KEY (product_id) REFERENCES address(address_id),
-    FOREIGN KEY (customer_id) REFERENCES address(address_id)
+    product_id INT REFERENCES product(product_id), 
+    customer_id INT REFERENCES customer(customer_id)
 );
 ")
 
@@ -369,21 +365,38 @@ if (TRUE) {
 # Write to promotion
 if (TRUE) {
   # Read existing primary keys from the database
-  existing_keys_prod <- dbGetQuery(my_db, "SELECT product_id FROM product")
+  existing_keys_promo <- dbGetQuery(my_db, "SELECT promotion_id FROM promotion")
   
   # Extract primary keys from your dataframe
-  new_keys_prod <- ecom_product_data$product_id 
+  new_keys_promo <- ecom_product_data$promotion_id 
   
   # Identify new records by comparing primary keys
-  new_records_prod <- ecom_product_data[!new_keys_prod %in% existing_keys_prod$product_id, ]
+  new_records_promo <- ecom_promotion_data[!new_keys_promo %in% existing_keys_promo$promotion_id, ]
   
   # Insert new records into the database
-  dbWriteTable(my_db, "product", new_records_prod, append = TRUE, row.names = FALSE)
+  dbWriteTable(my_db, "promotion", new_records_prod, append = TRUE, row.names = FALSE)
   print("Done")
 } else {
-  print("Error: Product validation failed.")
+  print("Error: promotion validation failed.")
 }
 
+# Write to provide
+if (TRUE) {
+  # Read existing primary keys from the database
+  existing_keys_promo <- dbGetQuery(my_db, "SELECT promotion_id FROM provide")
+  
+  # Extract primary keys from your dataframe
+  new_keys_promo <- ecom_product_data$promotion_id 
+  
+  # Identify new records by comparing primary keys
+  new_records_promo <- ecom_provide_data[!new_keys_promo %in% existing_keys_promo$promotion_id, ]
+  
+  # Insert new records into the database
+  dbWriteTable(my_db, "promotion", new_records_prod, append = TRUE, row.names = FALSE)
+  print("Done")
+} else {
+  print("Error: promotion validation failed.")
+}
 
 # Data Analysis 
 
