@@ -776,28 +776,31 @@ this_filename_time <- format(Sys.time(), format = "%H_%M")
 ggsave(filename = paste0("figures/sales_by_country_", this_filename_date, "_", this_filename_time, ".png"), plot = viz4, device = "png", width = 10, height = 7)
 
 # Sales amount by reviews
-# A higher review score did not mean the high amount of sales. As shown in the plot, clothing had the sales amount below the average sales by category, 
-# however, home & garden which had slightly less review score than clothing showed better sales performance. Automotive had the least review score, 
-# but displayed the sales greater than the average sales by category.
-viz5 <- sales_data %>% 
-  group_by(category_name) %>% 
-  summarise(average_review_score = mean(review_score), sales_amount = sum(sales_amount)) %>% 
-  mutate(color = case_when(sales_amount > mean(category_sales$sales_amount) ~ "1. Over the average sales by category", 
-                           sales_amount < mean(category_sales$sales_amount) ~ "2. Below the average sales by category")) %>%
-  ggplot(aes(x = average_review_score, 
-             y = reorder(category_name, average_review_score), 
-             color = color, 
-             fill = color)) + 
+viz5 <- sales_data %>%
+  group_by(category_name) %>%
+  summarise(average_review_score = mean(review_score),
+            sales_amount = sum(sales_amount)) %>%
+  mutate(color = ifelse(sales_amount > mean(sales_amount),
+                        "1. Over the average sales by category",
+                        "2. Below the average sales by category")) %>%
+  ggplot(aes(x = average_review_score,
+             y = reorder(category_name, average_review_score),
+             color = color)) +
   geom_point(size = 4) +
-  geom_col(width = 0.01) + 
-  labs(title = "Category by reviews", subtitle = "(Average sales by category = 75,444 pounds)", 
+  geom_col(aes(fill = color), width = 0.01) +
+  scale_fill_manual(values = c("1. Over the average sales by category" = "blue",
+                               "2. Below the average sales by category" = "red")) +
+  scale_color_manual(values = c("1. Over the average sales by category" = "blue",
+                                "2. Below the average sales by category" = "red")) +
+  labs(title = "Category by reviews", subtitle = "(Average sales by category = 75,444 pounds)",
        x = "Average review score", y = "Category") +
   theme_classic()
 
 # Save the plot with a timestamp
 this_filename_date <- as.character(Sys.Date())
 this_filename_time <- format(Sys.time(), format = "%H_%M")
-ggsave(filename = paste0("figures/category_by_review_", this_filename_date, "_", this_filename_time, ".png"), plot = viz5, device = "png", width = 10, height = 7)
+ggsave(filename = paste0("figures/category_by_review_", this_filename_date, "_", this_filename_time, ".png"),
+       plot = viz5, device = "png", width = 10, height = 7)
 
 # Sales trend by date
 # The sales shows the increasing trend over time from 2023 
