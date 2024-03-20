@@ -12,7 +12,7 @@ library(ggplot2)
 
 #na
 # DB connection
-db_file_path <- "script/e-commerce.db"
+db_file_path <- "script/ecommerce.db"
 my_db <- RSQLite::dbConnect(RSQLite::SQLite(),db_file_path)
 
 # Create Tables in DB
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS provide (
 
 # Order
 dbExecute(my_db, "
-CREATE TABLE IF NOT EXISTS `order` (
+CREATE TABLE IF NOT EXISTS orders (
     order_id VARCHAR(50) PRIMARY KEY,
     order_date DATE,
     quantity INT,
@@ -147,7 +147,7 @@ dbExecute(my_db, "
 CREATE TABLE IF NOT EXISTS transaction_billing (
   billing_id INT PRIMARY KEY,
   order_id INT,
-  FOREIGN KEY (order_id) REFERENCES `order`(order_id)
+  FOREIGN KEY (order_id) REFERENCES orders(order_id)
 );
 ")
 
@@ -186,6 +186,7 @@ for (entity_folder in subdirectories) {
   }
 }
 
+
 # Print the names of the created dataframes
 # print(ls(pattern = "ecom_"))
 
@@ -214,6 +215,7 @@ for (folder in entity_folders) {
 }
 
 # Data Validation
+# Define all validation functions
 
 # Function to check email format
 check_email_format <- function(email) {
@@ -229,9 +231,10 @@ check_phone_format <- function(phone) {
 
 # Function to check phone number format for seller
 check_phone_format_seller <- function(phone) {
-  valid.phone.seller <- grepl("^44-\\d{11}$", phone)
+  valid.phone.seller <- grepl("^\\d{12}$", phone)
   return(valid.phone.seller)
 }
+
 
 # Function to card number format
 check_card_format <- function(date){
@@ -247,7 +250,7 @@ check_names_not_null <- function(first_name, last_name) {
 
 # Function to check for null names
 check_names_not_null.s <- function(catname) {
-  return(is.na(catname))
+  return(!is.na(catname))
 }
 
 # Function to check for characters in names
@@ -277,214 +280,157 @@ check_range <- function(value, min_value, max_value) {
   return(value >= min_value & value <= max_value)
 }
 
-# Customer 
-# Email 
-email_validity.customer <- sapply(ecom_customer_data$email, check_email_format)
-# Phone number validation
-phone_validity.customer <- sapply(ecom_customer_data$contact_number, check_phone_format)
-# Card number validation
-card_validity.customer <- sapply(ecom_customer_data$card_number, check_card_format)
-# Name validation
-name_validity.customer <- sapply(1:length(ecom_customer_data$first_name), function(i) {
-  check_names_not_null(ecom_customer_data$first_name[i], ecom_customer_data$last_name[i])
-})
-
-# Category
-# name not null
-catname_validity.category <- sapply(ecom_category_data$category_name, check_names_not_null.s)
-# desc check
-catdesc_validity.category <- nchar(ecom_category_data$category_description) < 50
-
-# Promotion
-# check discount code
+# Define the pattern for promotion IDs
 pattern <- "[A-Z]{2}\\d{2}"
-invalid.discount.codes <- sapply(ecom_promotion_data$promotion_id, grepl, pattern)
-# check discount
-discount.validate.promotion <- ecom_promotion_data$promotion_price < 0.1 | ecom_promotion_data$promotion_price > 1.0
 
-# Seller
-# Email
-email_validity.seller <- sapply(ecom_seller_data$email, check_email_format)
-# Phone number validation
-phone_validity.seller <- sapply(ecom_seller_data$contact, check_phone_format_seller)
+# Apply validation functions to update data frame with valid data and remove invalid data
 
-# Review
-# check score
-revscore.validate.review <- ecom_review$review_score >= 1 | ecom_review$review_score <= 5
+# Customer data
+ecom_customer_data <- ecom_customer_data[sapply(ecom_customer_data$email, check_email_format), ]
+ecom_customer_data <- ecom_customer_data[sapply(ecom_customer_data$contact_number, check_phone_format), ]
 
-# Order
-# date format
-date_validity.order <- sapply(ecom_order_data$order_date, check_date_format)
-# check quantity
-quantity.validate.ord <- ecom_order_data$quantity >= 1 | ecom_order_data$quantity <= 10
-# product id
-prodname_validity.ord <- sapply(ecom_order_data$product_id, check_names_not_null.s)
+# Category data
+ecom_category_data <- ecom_category_data[sapply(ecom_category_data$category_name, check_names_not_null.s), ]
 
-# Product
-# Product name not null
+# Promotion data
+ecom_promotion_data <- ecom_promotion_data[grepl(pattern, ecom_promotion_data$promotion_id), ]
+ecom_promotion_data <- ecom_promotion_data[discount.validate.promotion, ]
+
+# Seller data
+ecom_seller_data <- ecom_seller_data[sapply(ecom_seller_data$email, check_email_format), ]
+
+# Review data
+revscore.validate.review <- ecom_review$review_score >= 1 & ecom_review$review_score <= 5
+ecom_review <- ecom_review[revscore.validate.review, ]
+ 
+# Order data
+# ecom_order_data <- ecom_order_data[date_validity.order, ]
+# ecom_order_data <- ecom_order_data[quantity.validate.ord, ]
+# ecom_order_data <- ecom_order_data[prodname_validity.ord, ]
+
+# Apply validation function to product names to create proname_validity.prod
 proname_validity.prod <- sapply(ecom_product_data$product_name, check_names_not_null.s)
-proname_validity.prod.l <- nchar(ecom_product_data$product_name) < 50
-proname_validity.prod.desc <- nchar(ecom_product_data$product_description) < 100
-# brand name not null
-probrand_validity.prod <- sapply(ecom_product_data$brand, check_names_not_null.s)
-# price quantity
-prodprice_validity.prod <- ecom_product_data$price <= 10000
-# date format
-prodate_validity.prod <- sapply(ecom_product_data$registration_date, check_date_format)
 
-# Shipping
-valid_status <- c("In-Transit", "Shipped", "Delivered", "Out for Delivery")
-# Check the pattern for each value in the 'Status' column
-invalid_statuses <- ecom_shipping$shipment_status %in% valid_status
+# Filter ecom_product_data based on proname_validity.prod
+ecom_product_data <- ecom_product_data[proname_validity.prod, ]
+# Filter ecom_product_data based on product name length validity
+ecom_product_data <- ecom_product_data[sapply(ecom_product_data$product_name, nchar) < 50, ]
 
-# Subcategory
-# name not null
-name_validity.subcat <- sapply(ecom_sub_category_data$sub_category_name, check_names_not_null.s)
+# Filter ecom_product_data based on product description length validity
+ecom_product_data <- ecom_product_data[sapply(ecom_product_data$product_description, nchar) < 100, ]
 
-# Address
-pattern.postcode <- "^.{3} .{3}$"
-invalid.post.codes <- sapply(ecom_address_data$postal_code, grepl, pattern.postcode)
+# Filter ecom_product_data based on brand name validity
+ecom_product_data <- ecom_product_data[sapply(ecom_product_data$brand, check_names_not_null.s), ]
+
+# Filter ecom_product_data based on product price validity
+ecom_product_data <- ecom_product_data[ecom_product_data$price <= 10000, ]
+
+# Filter ecom_product_data based on registration date format validity
+ecom_product_data <- ecom_product_data[sapply(ecom_product_data$registration_date, check_date_format), ]
+
+
+# Define valid shipment statuses
+valid_statuses <- c("In-Transit", "Shipped", "Delivered", "Out for Delivery")
+
+# Function to check if a shipment status is valid
+check_valid_status <- function(status) {
+  return(status %in% valid_statuses)
+}
+
+# Apply the function to the shipment_status column to create invalid_statuses
+invalid_statuses <- !sapply(ecom_shipping$shipment_status, check_valid_status)
+
+# Filter ecom_shipping to remove rows with invalid statuses
+ecom_shipping <- ecom_shipping[!invalid_statuses, ]
+
+# Function to check validity of subcategory names
+check_subcategory_name_validity <- function(names_vector) {
+  valid_names <- sapply(names_vector, check_names_not_null.s)
+  return(valid_names)
+}
+
+# Apply the function to the subcategory names to create a logical vector indicating validity
+valid_subcategory_names <- check_subcategory_name_validity(ecom_sub_category_data$sub_category_name)
+
+# Filter ecom_sub_category_data based on valid subcategory names
+ecom_sub_category_data <- ecom_sub_category_data[valid_subcategory_names, ]
+
+# Function to check validity of postal codes
+check_postal_code_validity <- function(postal_codes_vector) {
+  valid_postal_codes <- sapply(postal_codes_vector, function(postal_code) {
+    grepl("^.{3} .{3}$", postal_code)  # Assuming postal codes have the format "XXX XXX"
+  })
+  return(valid_postal_codes)
+}
+
+# Apply the function to the postal codes to create a logical vector indicating validity
+valid_postal_codes <- check_postal_code_validity(ecom_address_data$postal_code)
+
+# Filter ecom_address_data based on valid postal codes
+ecom_address_data <- ecom_address_data[valid_postal_codes, ]
+
+
 
 # Append Data into Database
 
 # db connection
 my_db <- RSQLite::dbConnect(RSQLite::SQLite(), db_file_path)
 
-data_exists <- function(db, table_name, criteria) {
-  query <- paste0("SELECT COUNT(*) FROM ", table_name, " WHERE ", criteria, ";")
-  result <- dbGetQuery(db, query)
+# Function to check if data exists in a table
+data_exists <- function(connection, table_name, data_frame) {
+  # Construct the query to check for existence of data
+  query <- paste0("SELECT COUNT(*) FROM ", table_name)
+  result <- dbGetQuery(connection, query)
   return(result[[1]] > 0)
 }
 
-# Function to insert data into a database table for each entity
-insert_data <- function(db, table_name, data_frame, unique_column) {
-  for (i in 1:nrow(data_frame)) {
-    # Extract row data
-    row_data <- data_frame[i, ]
-    # Extract unique value for validation
-    unique_value <- row_data[[unique_column]]
-    # Check if data already exists
-    if (data_exists(db, table_name, paste0(unique_column, " = '", unique_value, "'"))) {
-      print(paste("Data with", unique_column, unique_value, "already exists in", table_name, ". Skipping insertion."))
-    } else {
-      # Insert data into the table
-      dbWriteTable(db, table_name, row_data, append = TRUE)
-      print(paste("Data with", unique_column, unique_value, "inserted into", table_name))
-    }
+# Function to insert data into a table if it doesn't exist
+insert_data_if_not_exists <- function(connection, table_name, data_frame) {
+  # Check if data already exists in the table
+  if (data_exists(connection, table_name)) {
+    cat("Data already exists in", table_name, "\n")
+    return()
   }
+  
+  # Extract column names
+  columns <- names(data_frame)
+  
+  # Construct the INSERT INTO SQL query
+  insert_query <- paste0("INSERT INTO '", table_name, "' (", paste0("'", columns, "'", collapse = ", "), ") VALUES ")
+  
+  # Loop through each row of the data frame and insert values
+  for (i in 1:nrow(data_frame)) {
+    values <- paste0("(", paste0("'", gsub("'", "''", unlist(data_frame[i,])), "'", collapse = ","), ")")
+    dbExecute(connection, paste0(insert_query, values))
+  }
+  
+  cat("Data inserted into", table_name, "\n")
 }
 
-# Write to customer
-invalid_rows_cust <- !(all(email_validity.customer) & all(phone_validity.customer) & all(card_validity.customer) & all(name_validity.customer))
-if (!all(invalid_rows_cust)) {
-  insert_data(my_db, "customer", ecom_customer_data, "customer_id")
-} else {
-  # Remove rows with failed data validation
-  ecom_cust_valid <- ecom_customer_data[!invalid_rows_cust, ]
-  # Insert valid records into the database
-  insert_data(my_db, "customer", ecom_cust_valid, "customer_id")
-}
 
-# Write to product
-invalid_rows_prod <- !(all(proname_validity.prod) & all(proname_validity.prod.l) & all(proname_validity.prod.desc) & all(probrand_validity.prod)
-                       & all(prodprice_validity.prod) & all(prodate_validity.prod))
-if (!all(invalid_rows_prod)) {
-  insert_data(my_db, "product", ecom_product_data, "product_id")
-} else {
-  # Remove rows with failed data validation
-  ecom_prod_valid <- ecom_product_data[!invalid_rows_prod, ]
-  # Insert valid records into the database
-  insert_data(my_db, "product", ecom_prod_valid, "product_id")
-}
 
-# Write to promotion
-invalid_rows_promo <- !(all(invalid.discount.codes) & all(discount.validate.promotion))
-if (!any(invalid_rows_promo)) {
-  insert_data(my_db, "promotion", ecom_promotion_data, "promotion_id")
-} else {
-  # Remove rows with failed data validation
-  ecom_promo_valid <- ecom_promotion_data[!invalid_rows_promo, ]
-  insert_data(my_db, "promotion", ecom_promo_valid, "promotion_id")
-}
 
-# Write to address
-invalid_rows_addr <- !(all(invalid.post.codes))
-if (!any(invalid_rows_addr)) {
-  insert_data(my_db, "address", ecom_address_data, "address_id")
-} else {
-  # Remove rows with failed data validation
-  ecom_addr_valid <- ecom_address_data[!invalid_rows_addr, ]
-  insert_data(my_db, "address", ecom_addr_valid, "address_id")
-}
 
-# Write to shipping
-# Identify rows with failed data validation
-invalid_rows_ship <- !(all(invalid_statuses))
-if (!any(invalid_rows_ship)) {
-  insert_data(my_db, "shipping", ecom_shipping, "shipping_id")
-} else {
-  # Remove rows with failed data validation
-  ecom_shipping_valid <- ecom_shipping[!invalid_rows_ship, ]
-  insert_data(my_db, "shipping", ecom_shipping_valid, "shipping_id")
-}
 
-# Write to order
-invalid_rows_order <- !(all(date_validity.order) & all(quantity.validate.ord) & all(prodname_validity.ord))
-if (!any(invalid_rows_order)) {
-  insert_data(my_db, "`order`", ecom_order_data, "order_id")
-} else {
-  # Remove rows with failed data validation
-  ecom_ord_valid <- ecom_order_data[!invalid_rows_order, ]
-  insert_data(my_db, "`order`", ecom_ord_valid, "order_id")
-}
+# Insert data from data frames into respective tables
+insert_data_if_not_exists(my_db, "address", ecom_address_data)
+insert_data_if_not_exists(my_db, "product", ecom_product_data)
+insert_data_if_not_exists(my_db, "seller", ecom_seller_data)
+insert_data_if_not_exists(my_db, "category", ecom_category_data)
+insert_data_if_not_exists(my_db, "promotion", ecom_promotion_data)
+insert_data_if_not_exists(my_db, "shipping", ecom_shipping)
+insert_data_if_not_exists(my_db, "customer", ecom_customer_data)
+insert_data_if_not_exists(my_db, "provide", ecom_provide_data)
+insert_data_if_not_exists(my_db, "subcategory", ecom_sub_category_data)
+insert_data_if_not_exists(my_db, "orders", ecom_order_data)
+insert_data_if_not_exists(my_db, "review", ecom_review)
+insert_data_if_not_exists(my_db, "transaction_billing", ecom_transaction_billing_data)
 
-# Write to subcategory
-invalid_rows_subcat <- !(all(name_validity.subcat))
-if (!any(invalid_rows_subcat)) {
-  insert_data(my_db, "subcategory", ecom_sub_category_data, "sub_category_id")
-} else {
-  # Remove rows with failed data validation
-  ecom_subcat_valid <- ecom_sub_category_data[!invalid_rows_subcat, ]
-  insert_data(my_db, "subcategory", ecom_subcat_valid, "sub_category_id")
-}
 
-# Write to provide
-if (TRUE) {
-  # Read existing primary keys from the database
-  insert_data(my_db, "provide", ecom_provide_data, "provide_id")
-} else {
-  insert_data(my_db, "provide", ecom_provide_data, "provide_id")
-}
 
-# Write to review
-invalid_rows_rev <- !(all(revscore.validate.review))
-if (!any(invalid_rows_rev)) {
-  insert_data(my_db, "review", ecom_review, "review_id")
-} else {
-  # Remove rows with failed data validation
-  ecom_rev_valid <- ecom_review[!invalid_rows_rev, ]
-  # Insert valid records into the database
-  insert_data(my_db, "review", ecom_rev_valid, "review_id")
-}
 
-# Write to seller
-# Identify rows with failed data validation
-invalid_rows_seller <- !(all(email_validity.seller) & all(phone_validity.seller))
-if (!any(invalid_rows_seller)) {
-  insert_data(my_db, "seller", ecom_seller_data, "seller_id")
-} else {
-  # Remove rows with failed data validation
-  ecom_seller_valid <- ecom_seller_data[!invalid_rows_seller, ]
-  insert_data(my_db, "seller", ecom_seller_valid, "seller_id")
-}
 
-# Write to transaction_billing
-if (TRUE) {
-  # Read existing primary keys from the database
-  insert_data(my_db, "transaction_billing", ecom_transaction_billing_data, "billing_id")
-} else {
-  insert_data(my_db, "transaction_billing", ecom_seller_ecom_transaction_billing_datavalid, "billing_id")
-}
+
 
 # Data Analysis 
 
@@ -510,7 +456,7 @@ SELECT
     o.customer_id,
     SUM(o.quantity * p.price) AS total_value
 FROM 
-    'order' o
+    orders o
 JOIN 
     product p ON o.product_id = p.product_id
 GROUP BY 
@@ -529,7 +475,7 @@ SELECT
     c.last_name, 
     COUNT(*) AS number_of_orders
 FROM 
-    'order' o
+    orders o
 JOIN 
     customer c ON o.customer_id = c.customer_id
 GROUP BY 
@@ -546,7 +492,7 @@ SELECT
     p.product_name, 
     (o.quantity * p.price) AS total_amount_sold
 FROM 
-    'order' o
+    orders o
 JOIN
     product p ON o.product_id = p.product_id
 GROUP BY 
@@ -582,7 +528,7 @@ SELECT
     p.product_name,
     SUM(o.quantity) AS quantity_sold
 FROM 
-    'order' o
+    orders o
 JOIN 
     product p ON o.product_id = p.product_id
 GROUP BY 
@@ -599,7 +545,7 @@ SELECT
     c.category_name,
     COUNT(o.quantity) AS total_sold_unit
 FROM 
-    'order' o
+    orders o
 JOIN 
     Product p ON o.product_id = p.product_id
 JOIN 
@@ -621,14 +567,15 @@ sales_query <- " SELECT
                   promotion_price, order_date
                 FROM customer
                 INNER JOIN address ON customer.customer_id = address.customer_id
-                INNER JOIN `order`ON customer.customer_id = `order`.customer_id
-                LEFT JOIN product ON product.product_id = `order`.product_id
+                INNER JOIN orders ON customer.customer_id = orders.customer_id
+                LEFT JOIN product ON product.product_id = orders.product_id
                 LEFT JOIN category ON category.category_id = product.category_id
-                LEFT JOIN transaction_billing ON `order`.order_id = transaction_billing.order_id
+                LEFT JOIN transaction_billing ON orders.order_id = transaction_billing.order_id
                 LEFT JOIN shipping ON shipping.billing_id = transaction_billing.billing_id
                 LEFT JOIN subcategory ON subcategory.category_id = category.category_id
                 LEFT JOIN review ON review.customer_id = customer.customer_id
                 LEFT JOIN promotion ON promotion.category_id = category.category_id"
+
 
 seller_query <- " SELECT 
                     category_name, product_name, seller.seller_id, review_score
@@ -680,7 +627,7 @@ top_query <- "SELECT
                 sub.sub_category_id,
                 sub.sub_category_name,
                 COUNT(ord.quantity) AS total_sold_units
-              FROM `order` ord
+              FROM orders ord
               JOIN product prod ON ord.product_id = prod.product_id
               JOIN subcategory sub ON prod.category_id = sub.category_id
               JOIN category cat ON sub.category_id = cat.category_id
@@ -810,7 +757,7 @@ sales_category_query <- "SELECT
                           c.category_id, 
                           c.category_name, 
                           SUM(o.quantity) AS units_sold
-                          FROM `order` o
+                          FROM orders o
                           INNER JOIN product p ON o.product_id = p.product_id
                           INNER JOIN category c ON p.category_id = c.category_id
                           GROUP BY o.order_date, c.category_id, c.category_name
