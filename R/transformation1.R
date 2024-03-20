@@ -294,7 +294,22 @@ ecom_category_data <- ecom_category_data[sapply(ecom_category_data$category_name
 
 # Promotion data
 ecom_promotion_data <- ecom_promotion_data[grepl(pattern, ecom_promotion_data$promotion_id), ]
-ecom_promotion_data <- ecom_promotion_data[discount.validate.promotion, ]
+
+filter_promotion_data <- function(promotion_data) {
+  # Define the pattern for promotion ID validation
+  pattern <- "[A-Z]{2}\\d{2}"
+  
+  # Filter promotion data based on promotion ID pattern
+  promotion_data <- promotion_data[grepl(pattern, promotion_data$promotion_id), ]
+  
+  # Filter promotion data based on discount validation
+  promotion_data <- promotion_data[promotion_data$promotion_price >= 0.1 & promotion_data$promotion_price <= 1.0, ]
+  
+  return(promotion_data)
+}
+
+# Usage:
+ecom_promotion_data <- filter_promotion_data(ecom_promotion_data)
 
 # Seller data
 ecom_seller_data <- ecom_seller_data[sapply(ecom_seller_data$email, check_email_format), ]
